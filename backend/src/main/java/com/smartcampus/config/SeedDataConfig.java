@@ -1,0 +1,87 @@
+package com.smartcampus.config;
+
+import com.smartcampus.entity.Notification;
+import com.smartcampus.entity.Ticket;
+import com.smartcampus.entity.TicketComment;
+import com.smartcampus.entity.User;
+import com.smartcampus.enums.AuthProvider;
+import com.smartcampus.enums.NotificationType;
+import com.smartcampus.enums.Role;
+import com.smartcampus.enums.TicketPriority;
+import com.smartcampus.enums.TicketStatus;
+import com.smartcampus.repository.NotificationRepository;
+import com.smartcampus.repository.TicketCommentRepository;
+import com.smartcampus.repository.TicketRepository;
+import com.smartcampus.repository.UserRepository;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+@Configuration
+public class SeedDataConfig {
+
+    @Bean
+    CommandLineRunner seedData(UserRepository userRepository,
+                               TicketRepository ticketRepository,
+                               TicketCommentRepository ticketCommentRepository,
+                               NotificationRepository notificationRepository,
+                               PasswordEncoder passwordEncoder) {
+        return args -> {
+            if (userRepository.count() > 0) {
+                return;
+            }
+
+            User admin = new User();
+            admin.setFullName("System Admin");
+            admin.setEmail("admin@smartcampus.local");
+            admin.setPasswordHash(passwordEncoder.encode("Admin@123"));
+            admin.setRole(Role.ADMIN);
+            admin.setAuthProvider(AuthProvider.LOCAL);
+            userRepository.save(admin);
+
+            User technician = new User();
+            technician.setFullName("Main Technician");
+            technician.setEmail("tech@smartcampus.local");
+            technician.setPasswordHash(passwordEncoder.encode("Tech@123"));
+            technician.setRole(Role.TECHNICIAN);
+            technician.setAuthProvider(AuthProvider.LOCAL);
+            userRepository.save(technician);
+
+            User student = new User();
+            student.setFullName("Campus User");
+            student.setEmail("user@smartcampus.local");
+            student.setPasswordHash(passwordEncoder.encode("User@123"));
+            student.setRole(Role.USER);
+            student.setAuthProvider(AuthProvider.LOCAL);
+            userRepository.save(student);
+
+            Ticket ticket = new Ticket();
+            ticket.setTitle("Projector not working in Lab 03");
+            ticket.setCategory("Equipment Fault");
+            ticket.setDescription("The projector powers on but shows a blank screen during lectures.");
+            ticket.setPriority(TicketPriority.HIGH);
+            ticket.setStatus(TicketStatus.OPEN);
+            ticket.setLocationLabel("Lab 03 - Engineering Block");
+            ticket.setResourceName("Ceiling Projector");
+            ticket.setPreferredContact("0771234567");
+            ticket.setCreator(student);
+            ticket.setAssignedTechnician(technician);
+            ticketRepository.save(ticket);
+
+            TicketComment comment = new TicketComment();
+            comment.setTicket(ticket);
+            comment.setAuthor(technician);
+            comment.setContent("I will inspect this issue during the next maintenance round.");
+            ticketCommentRepository.save(comment);
+
+            Notification notification = new Notification();
+            notification.setRecipient(student);
+            notification.setTitle("Technician assigned");
+            notification.setMessage("A technician was assigned to your ticket #" + ticket.getId());
+            notification.setType(NotificationType.ASSIGNMENT);
+            notification.setReferenceId(String.valueOf(ticket.getId()));
+            notificationRepository.save(notification);
+        };
+    }
+}

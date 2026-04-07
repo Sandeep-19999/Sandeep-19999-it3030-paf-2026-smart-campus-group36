@@ -1,0 +1,73 @@
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+
+const DEV_ACCOUNTS = [
+  { role: 'Admin', email: 'admin@smartcampus.local', password: 'Admin@123' },
+  { role: 'Technician', email: 'tech@smartcampus.local', password: 'Tech@123' },
+  { role: 'User', email: 'user@smartcampus.local', password: 'User@123' }
+];
+
+export default function LoginPage() {
+  const { devLogin } = useAuth();
+  const navigate = useNavigate();
+  const [form, setForm] = useState({ email: DEV_ACCOUNTS[0].email, password: DEV_ACCOUNTS[0].password });
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const backendOrigin = useMemo(() => import.meta.env.VITE_BACKEND_ORIGIN || 'http://localhost:8080', []);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setSubmitting(true);
+    setError('');
+    try {
+      await devLogin(form);
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="login-shell">
+      <div className="login-card">
+        <div>
+          <h1>Smart Campus Operations Hub</h1>
+          <p className="muted-text">Spring Boot backend + React frontend for Modules C, D and E.</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="form-grid">
+          <label>
+            Email
+            <input value={form.email} onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))} />
+          </label>
+          <label>
+            Password
+            <input type="password" value={form.password} onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))} />
+          </label>
+          {error ? <div className="error-box">{error}</div> : null}
+          <button type="submit" className="primary-btn" disabled={submitting}>
+            {submitting ? 'Signing in...' : 'Sign in with local demo account'}
+          </button>
+        </form>
+
+        <div className="quick-login-grid">
+          {DEV_ACCOUNTS.map((account) => (
+            <button key={account.role} className="quick-login-card" onClick={() => setForm({ email: account.email, password: account.password })}>
+              <strong>{account.role}</strong>
+              <span>{account.email}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="separator">or</div>
+        <a className="secondary-btn full-width-anchor" href={`${backendOrigin}/oauth2/authorization/google`}>
+          Continue with Google OAuth
+        </a>
+        <p className="muted-text small-text">Google login will work after adding GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in the backend environment.</p>
+      </div>
+    </div>
+  );
+}
