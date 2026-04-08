@@ -6,10 +6,15 @@ spring:
     name: smart-campus-backend
 
   datasource:
-    url: jdbc:mysql://localhost:3306/smart_campus_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Colombo
-    username: root
-    password: 
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:h2:mem:smart_campus_db
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
 
   jpa:
     hibernate:
@@ -18,7 +23,7 @@ spring:
     show-sql: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.MySQLDialect
+        dialect: org.hibernate.dialect.H2Dialect
 
   servlet:
     multipart:
