@@ -1,14 +1,19 @@
 package com.smartcampus.config;
 
 import com.smartcampus.entity.Notification;
+import com.smartcampus.entity.Facility;
+import com.smartcampus.entity.Booking;
 import com.smartcampus.entity.Ticket;
 import com.smartcampus.entity.TicketComment;
 import com.smartcampus.entity.User;
 import com.smartcampus.enums.AuthProvider;
+import com.smartcampus.enums.BookingStatus;
 import com.smartcampus.enums.NotificationType;
 import com.smartcampus.enums.Role;
 import com.smartcampus.enums.TicketPriority;
 import com.smartcampus.enums.TicketStatus;
+import com.smartcampus.repository.BookingRepository;
+import com.smartcampus.repository.FacilityRepository;
 import com.smartcampus.repository.NotificationRepository;
 import com.smartcampus.repository.TicketCommentRepository;
 import com.smartcampus.repository.TicketRepository;
@@ -18,11 +23,15 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.LocalDateTime;
+
 @Configuration
 public class SeedDataConfig {
 
     @Bean
     CommandLineRunner seedData(UserRepository userRepository,
+                               FacilityRepository facilityRepository,
+                               BookingRepository bookingRepository,
                                TicketRepository ticketRepository,
                                TicketCommentRepository ticketCommentRepository,
                                NotificationRepository notificationRepository,
@@ -55,6 +64,33 @@ public class SeedDataConfig {
             student.setRole(Role.USER);
             student.setAuthProvider(AuthProvider.LOCAL);
             userRepository.save(student);
+
+            Facility conferenceRoom = new Facility();
+            conferenceRoom.setName("Conference Room A");
+            conferenceRoom.setType("Meeting Room");
+            conferenceRoom.setLocation("Administration Block - Level 2");
+            conferenceRoom.setCapacity(20);
+            conferenceRoom.setDescription("Project discussions, faculty meetings and presentations.");
+            conferenceRoom.setActive(true);
+            facilityRepository.save(conferenceRoom);
+
+            Facility computerLab = new Facility();
+            computerLab.setName("Computer Lab 03");
+            computerLab.setType("Lab");
+            computerLab.setLocation("Engineering Block - Floor 1");
+            computerLab.setCapacity(45);
+            computerLab.setDescription("Reserved for practical sessions and assessment activities.");
+            computerLab.setActive(true);
+            facilityRepository.save(computerLab);
+
+            Booking booking = new Booking();
+            booking.setFacility(conferenceRoom);
+            booking.setRequester(student);
+            booking.setPurpose("IEEE student branch planning session");
+            booking.setStartTime(LocalDateTime.now().plusDays(1).withHour(10).withMinute(0).withSecond(0).withNano(0));
+            booking.setEndTime(LocalDateTime.now().plusDays(1).withHour(12).withMinute(0).withSecond(0).withNano(0));
+            booking.setStatus(BookingStatus.PENDING);
+            bookingRepository.save(booking);
 
             Ticket ticket = new Ticket();
             ticket.setTitle("Projector not working in Lab 03");
