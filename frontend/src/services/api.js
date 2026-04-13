@@ -17,13 +17,20 @@ export async function apiRequest(path, { method = 'GET', body, token, isFormData
 
   if (!response.ok) {
     let message = 'Request failed';
+    let fieldErrors;
     try {
       const data = await response.json();
       message = data.message || message;
+      fieldErrors = data.fieldErrors;
     } catch {
       message = response.statusText || message;
     }
-    throw new Error(message);
+    const error = new Error(message);
+    if (fieldErrors) {
+      error.fieldErrors = fieldErrors;
+    }
+    error.status = response.status;
+    throw error;
   }
 
   if (response.status === 204) return null;

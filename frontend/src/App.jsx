@@ -2,13 +2,11 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
 import AppLayout from './layouts/AppLayout';
 import DashboardPage from './pages/DashboardPage';
-<<<<<<< HEAD
 import FacilitiesPage from './pages/FacilitiesPage';
 import HomePage from './pages/HomePage';
-=======
 import BookingsPage from './pages/BookingsPage';
->>>>>>> 44c5330cd856ecdd7f491c8f5d9798e1bc1e39c3
 import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
 import NotificationsPage from './pages/NotificationsPage';
 import OAuthSuccessPage from './pages/OAuthSuccessPage';
 import ResourcesPage from './pages/ResourcesPage';
@@ -40,7 +38,11 @@ export default function App() {
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/facilities" element={<FacilitiesPage />} />
-      <Route path="/login" element={<LoginPage />} />
+      <Route path="/login" element={<Navigate to="/login/staff" replace />} />
+      <Route path="/login/staff" element={<LoginPage variant="staff" />} />
+      <Route path="/login/student" element={<LoginPage variant="student" />} />
+      <Route path="/register" element={<Navigate to="/register/student" replace />} />
+      <Route path="/register/student" element={<RegisterPage />} />
       <Route path="/oauth-success" element={<OAuthSuccessPage />} />
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
       <Route
@@ -53,7 +55,6 @@ export default function App() {
       >
         <Route index element={<RoleHomeRedirect />} />
         <Route path="dashboard" element={<DashboardPage />} />
-<<<<<<< HEAD
         <Route
           path="admin"
           element={
@@ -62,10 +63,8 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        <Route path="resources" element={<ResourcesPage />} />
-=======
         <Route path="bookings" element={<BookingsPage />} />
->>>>>>> 44c5330cd856ecdd7f491c8f5d9798e1bc1e39c3
+        <Route path="resources" element={<ResourcesPage />} />
         <Route path="tickets" element={<TicketsPage />} />
         <Route path="tickets/:id" element={<TicketDetailsPage />} />
         <Route path="notifications" element={<NotificationsPage />} />

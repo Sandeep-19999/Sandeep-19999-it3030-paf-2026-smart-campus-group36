@@ -44,7 +44,7 @@ public class SecurityConfig {
                 .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/health", "/api/auth/dev-login", "/api/auth/oauth-info", "/h2-console/**", "/oauth2/**", "/login/oauth2/**").permitAll()
+                    .requestMatchers("/api/health", "/api/auth/dev-login", "/api/auth/register", "/api/auth/oauth-info", "/h2-console/**", "/oauth2/**", "/login/oauth2/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth -> oauth.successHandler(oAuth2LoginSuccessHandler))

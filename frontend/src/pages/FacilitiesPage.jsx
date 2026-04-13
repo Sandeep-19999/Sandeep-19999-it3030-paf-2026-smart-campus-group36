@@ -93,7 +93,7 @@ export default function FacilitiesPage() {
 
       <div className="facilities-actions">
         <Link to="/" className="secondary-btn">Back to Home</Link>
-        <Link to="/login" className="primary-btn">Login to Manage Facilities</Link>
+        <Link to="/login/staff" className="primary-btn">Staff Login to Manage Facilities</Link>
       </div>
     </div>
   );

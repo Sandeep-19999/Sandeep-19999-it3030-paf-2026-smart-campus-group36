@@ -41,6 +41,14 @@ export function AuthProvider({ children }) {
       setUser(me);
       return me;
     },
+    async registerStudent(credentials) {
+      const data = await authService.register(credentials);
+      localStorage.setItem('smart-campus-token', data.token);
+      setToken(data.token);
+      const me = await authService.me(data.token);
+      setUser(me);
+      return me;
+    },
     async completeOAuth(newToken) {
       localStorage.setItem('smart-campus-token', newToken);
       setToken(newToken);

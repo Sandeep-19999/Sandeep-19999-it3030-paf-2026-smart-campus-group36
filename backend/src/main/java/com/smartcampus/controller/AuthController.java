@@ -3,6 +3,7 @@ package com.smartcampus.controller;
 import com.smartcampus.dto.auth.AuthResponse;
 import com.smartcampus.dto.auth.DevLoginRequest;
 import com.smartcampus.dto.auth.MeResponse;
+import com.smartcampus.dto.auth.RegisterRequest;
 import com.smartcampus.dto.ticket.UserSummaryResponse;
 import com.smartcampus.entity.User;
 import com.smartcampus.service.AuthService;
@@ -26,6 +27,11 @@ public class AuthController {
     @PostMapping("/dev-login")
     public AuthResponse devLogin(@Valid @RequestBody DevLoginRequest request) {
         return authService.devLogin(request);
+    }
+
+    @PostMapping("/register")
+    public AuthResponse register(@Valid @RequestBody RegisterRequest request) {
+        return authService.register(request);
     }
 
     @GetMapping("/me")

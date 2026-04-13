@@ -32,7 +32,22 @@ export default function DashboardPage() {
   const pendingBookings = bookings.filter((booking) => booking.status === 'PENDING');
 
   return (
-    <div className="content-grid">
+    <div className="content-grid dashboard-grid">
+      <section className="dashboard-hero panel">
+        <div>
+          <p className="dashboard-kicker">Welcome back</p>
+          <h3>{user?.fullName || 'User'} Dashboard</h3>
+          <p className="muted-text">
+            You are signed in as <strong>{user?.role}</strong>. This view shows your current tickets, bookings, and notifications.
+          </p>
+        </div>
+        <div className="dashboard-user-chip">
+          <span className="dashboard-user-label">Logged in as</span>
+          <strong>{user?.fullName}</strong>
+          <span>{user?.email}</span>
+        </div>
+      </section>
+
       <section className="stats-grid">
         <article className="stat-card">
           <span>Total Tickets</span>

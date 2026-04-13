@@ -29,16 +29,20 @@ export default function HomePage() {
         </div>
         <div className="course-account-box">
           <p>Log in using your smart campus account</p>
-          <Link to="/login" className="course-login-link">Staff Login</Link>
+          <div className="course-login-actions">
+            <Link to="/login/staff" className="course-login-link">Staff Login</Link>
+            <Link to="/login/student" className="course-login-link">Student Login</Link>
+            <Link to="/register/student" className="course-login-link">Student Register</Link>
+          </div>
         </div>
       </header>
 
       <nav className="course-main-nav">
-        <a href="#">Programmes</a>
-        <a href="#">Support</a>
-        <a href="#">Resources</a>
+        <Link to="/app/bookings">Bookings</Link>
+        <Link to="/app/resources">Resources</Link>
+        <Link to="/app/tickets">Tickets</Link>
+        <Link to="/app/notifications">Notifications</Link>
         <Link to="/facilities">Facilities</Link>
-        <a href="#">Email</a>
       </nav>
 
       <section className="course-hero">
@@ -51,7 +55,7 @@ export default function HomePage() {
           </p>
           <div className="course-hero-actions">
             <Link to="/facilities" className="primary-btn">View Facilities</Link>
-            <Link to="/login" className="secondary-btn">Open Staff Portal</Link>
+            <Link to="/login/staff" className="secondary-btn">Open Staff Portal</Link>
           </div>
         </div>
         <div className="course-hero-visual" aria-hidden="true">

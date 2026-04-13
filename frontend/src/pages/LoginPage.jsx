@@ -1,17 +1,35 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-const DEV_ACCOUNTS = [
-  { role: 'Admin', email: 'admin@smartcampus.local', password: 'Admin@123' },
-  { role: 'Technician', email: 'tech@smartcampus.local', password: 'Tech@123' },
-  { role: 'User', email: 'user@smartcampus.local', password: 'User@123' }
-];
+const LOGIN_VARIANTS = {
+  staff: {
+    title: 'Staff Login',
+    subtitle: 'Use an admin or technician account to manage campus operations.',
+    submitLabel: 'Sign in as staff',
+    accounts: [
+      { role: 'Admin', email: 'admin@smartcampus.local', password: 'Admin@123' },
+      { role: 'Technician', email: 'tech@smartcampus.local', password: 'Tech@123' }
+    ]
+  },
+  student: {
+    title: 'Student Login',
+    subtitle: 'Use a student account to access bookings, tickets, and resources.',
+    submitLabel: 'Sign in as student',
+    accounts: [
+      { role: 'Student', email: 'user@smartcampus.local', password: 'User@123' }
+    ]
+  }
+};
 
-export default function LoginPage() {
+export default function LoginPage({ variant = 'staff' }) {
   const { devLogin } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ email: DEV_ACCOUNTS[0].email, password: DEV_ACCOUNTS[0].password });
+  const loginVariant = LOGIN_VARIANTS[variant] || LOGIN_VARIANTS.staff;
+  const [form, setForm] = useState({
+    email: loginVariant.accounts[0].email,
+    password: loginVariant.accounts[0].password
+  });
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const backendOrigin = useMemo(() => import.meta.env.VITE_BACKEND_ORIGIN || 'http://localhost:8080', []);
@@ -35,7 +53,8 @@ export default function LoginPage() {
       <div className="login-card">
         <div>
           <h1>Smart Campus Operations Hub</h1>
-          <p className="muted-text">Spring Boot backend + React frontend for Modules C, D and E.</p>
+          <p className="muted-text">{loginVariant.title} for Modules A, B, C, D and E.</p>
+          <p className="login-role-copy">{loginVariant.subtitle}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="form-grid">
@@ -49,12 +68,12 @@ export default function LoginPage() {
           </label>
           {error ? <div className="error-box">{error}</div> : null}
           <button type="submit" className="primary-btn" disabled={submitting}>
-            {submitting ? 'Signing in...' : 'Sign in with local demo account'}
+            {submitting ? 'Signing in...' : loginVariant.submitLabel}
           </button>
         </form>
 
         <div className="quick-login-grid">
-          {DEV_ACCOUNTS.map((account) => (
+          {loginVariant.accounts.map((account) => (
             <button
               key={account.role}
               type="button"
@@ -66,6 +85,12 @@ export default function LoginPage() {
             </button>
           ))}
         </div>
+
+        {variant === 'student' ? (
+          <p className="muted-text small-text">
+            New student? <Link to="/register/student" className="text-btn">Register first</Link>
+          </p>
+        ) : null}
 
         <div className="separator">or</div>
         <a className="secondary-btn full-width-anchor" href={`${backendOrigin}/oauth2/authorization/google`}>
