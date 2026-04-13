@@ -13,9 +13,11 @@ export default function AppLayout() {
           <p className="brand-subtitle">Modules C + D + E</p>
         </div>
         <nav className="nav-list">
-          <NavLink to="/dashboard">Dashboard</NavLink>
-          <NavLink to="/tickets">Tickets</NavLink>
-          <NavLink to="/notifications">Notifications</NavLink>
+          <NavLink to="/app/dashboard">Dashboard</NavLink>
+          {user?.role === 'ADMIN' ? <NavLink to="/app/admin">Admin</NavLink> : null}
+          <NavLink to="/app/resources">Resources</NavLink>
+          <NavLink to="/app/tickets">Tickets</NavLink>
+          <NavLink to="/app/notifications">Notifications</NavLink>
         </nav>
         <div className="sidebar-footer">
           <div className="user-card">

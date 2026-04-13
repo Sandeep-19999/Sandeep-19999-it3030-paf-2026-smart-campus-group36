@@ -21,8 +21,8 @@ export default function LoginPage() {
     setSubmitting(true);
     setError('');
     try {
-      await devLogin(form);
-      navigate('/dashboard');
+      const currentUser = await devLogin(form);
+      navigate(currentUser?.role === 'ADMIN' ? '/app/admin' : '/app/dashboard');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -55,7 +55,12 @@ export default function LoginPage() {
 
         <div className="quick-login-grid">
           {DEV_ACCOUNTS.map((account) => (
-            <button key={account.role} className="quick-login-card" onClick={() => setForm({ email: account.email, password: account.password })}>
+            <button
+              key={account.role}
+              type="button"
+              className="quick-login-card"
+              onClick={() => setForm({ email: account.email, password: account.password })}
+            >
               <strong>{account.role}</strong>
               <span>{account.email}</span>
             </button>

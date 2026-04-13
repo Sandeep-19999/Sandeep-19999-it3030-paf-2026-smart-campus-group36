@@ -74,7 +74,7 @@ export default function TicketsPage() {
         </div>
         <div className="list-stack">
           {tickets.map((ticket) => (
-            <Link key={ticket.id} to={`/tickets/${ticket.id}`} className="ticket-card-link">
+            <Link key={ticket.id} to={`/app/tickets/${ticket.id}`} className="ticket-card-link">
               <div className="ticket-row">
                 <div>
                   <strong>#{ticket.id} {ticket.title}</strong>

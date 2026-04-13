@@ -6,7 +6,7 @@ export default function UnauthorizedPage() {
       <div className="panel narrow-panel">
         <h2>Unauthorized</h2>
         <p className="muted-text">You do not have permission to access that page.</p>
-        <Link to="/dashboard" className="primary-btn">Go back to dashboard</Link>
+        <Link to="/app/dashboard" className="primary-btn">Go back to dashboard</Link>
       </div>
     </div>
   );

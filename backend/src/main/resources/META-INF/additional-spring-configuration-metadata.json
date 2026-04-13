@@ -1,0 +1,36 @@
+{
+  "groups": [
+    {
+      "name": "app",
+      "type": "java.lang.Object",
+      "sourceType": "com.smartcampus.config"
+    }
+  ],
+  "properties": [
+    {
+      "name": "app.jwt-secret",
+      "type": "java.lang.String",
+      "description": "JWT signing secret."
+    },
+    {
+      "name": "app.jwt-expiration-minutes",
+      "type": "java.lang.Long",
+      "description": "JWT expiration time in minutes."
+    },
+    {
+      "name": "app.frontend-url",
+      "type": "java.lang.String",
+      "description": "Frontend URL used for OAuth redirect targets."
+    },
+    {
+      "name": "app.upload-dir",
+      "type": "java.lang.String",
+      "description": "Directory used to store uploaded files."
+    },
+    {
+      "name": "app.cors-allowed-origins",
+      "type": "java.lang.String",
+      "description": "Comma-separated list of allowed CORS origins."
+    }
+  ]
+}
