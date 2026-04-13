@@ -20,7 +20,7 @@ export default function NotificationBell() {
   }, [token]);
 
   return (
-    <Link to="/notifications" className="notification-link">
+    <Link to="/app/notifications" className="notification-link">
       <span>Notifications</span>
       {count > 0 ? <span className="notification-count">{count}</span> : null}
     </Link>

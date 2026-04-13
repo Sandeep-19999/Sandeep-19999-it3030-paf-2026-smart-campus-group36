@@ -8,7 +8,7 @@ export default function ProtectedRoute({ children, roles }) {
     return <div className="page-center">Loading...</div>;
   }
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login/staff" replace />;
   }
   if (roles && !roles.includes(user?.role)) {
     return <Navigate to="/unauthorized" replace />;

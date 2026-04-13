@@ -39,12 +39,22 @@ export function AuthProvider({ children }) {
       setToken(data.token);
       const me = await authService.me(data.token);
       setUser(me);
+      return me;
+    },
+    async registerStudent(credentials) {
+      const data = await authService.register(credentials);
+      localStorage.setItem('smart-campus-token', data.token);
+      setToken(data.token);
+      const me = await authService.me(data.token);
+      setUser(me);
+      return me;
     },
     async completeOAuth(newToken) {
       localStorage.setItem('smart-campus-token', newToken);
       setToken(newToken);
       const me = await authService.me(newToken);
       setUser(me);
+      return me;
     },
     async logout() {
       if (token) {

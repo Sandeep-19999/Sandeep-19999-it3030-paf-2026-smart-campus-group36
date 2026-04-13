@@ -10,13 +10,15 @@ export default function AppLayout() {
       <aside className="sidebar">
         <div>
           <h1 className="brand-title">Smart Campus</h1>
-          <p className="brand-subtitle">Modules B + C + D + E</p>
+          <p className="brand-subtitle">Modules A + B + C + D + E</p>
         </div>
         <nav className="nav-list">
-          <NavLink to="/dashboard">Dashboard</NavLink>
-          <NavLink to="/bookings">Bookings</NavLink>
-          <NavLink to="/tickets">Tickets</NavLink>
-          <NavLink to="/notifications">Notifications</NavLink>
+          <NavLink to="/app/dashboard">Dashboard</NavLink>
+          {user?.role === 'ADMIN' ? <NavLink to="/app/admin">Admin</NavLink> : null}
+          <NavLink to="/app/bookings">Bookings</NavLink>
+          <NavLink to="/app/resources">Resources</NavLink>
+          <NavLink to="/app/tickets">Tickets</NavLink>
+          <NavLink to="/app/notifications">Notifications</NavLink>
         </nav>
         <div className="sidebar-footer">
           <div className="user-card">

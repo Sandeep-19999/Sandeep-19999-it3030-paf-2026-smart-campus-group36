@@ -15,7 +15,7 @@ export default function OAuthSuccessPage() {
       return;
     }
     completeOAuth(token)
-      .then(() => navigate('/dashboard'))
+      .then((currentUser) => navigate(currentUser?.role === 'ADMIN' ? '/app/admin' : '/app/dashboard'))
       .catch((err) => setError(err.message));
   }, [params, completeOAuth, navigate]);
 
