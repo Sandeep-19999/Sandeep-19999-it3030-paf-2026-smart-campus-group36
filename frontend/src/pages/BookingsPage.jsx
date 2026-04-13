@@ -168,36 +168,39 @@ export default function BookingsPage() {
   };
 
   return (
-    <div className="content-grid two-column">
-      <section className="panel">
-        <div className="panel-header">
-          <h3>Book a Facility</h3>
-        </div>
-        <form className="form-grid" onSubmit={submitBooking}>
-          <label>Facility
-            <select name="facilityId" value={bookingForm.facilityId} onChange={handleBookingChange} required>
-              <option value="">Select a facility</option>
-              {activeFacilities.map((facility) => (
-                <option key={facility.id} value={facility.id}>
-                  {facility.name} ({facility.type})
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>Purpose
-            <textarea name="purpose" rows="3" value={bookingForm.purpose} onChange={handleBookingChange} required />
-          </label>
-          <label>Start Time
-            <input type="datetime-local" name="startTime" value={bookingForm.startTime} onChange={handleBookingChange} required />
-          </label>
-          <label>End Time
-            <input type="datetime-local" name="endTime" value={bookingForm.endTime} onChange={handleBookingChange} required />
-          </label>
-          {error ? <div className="error-box">{error}</div> : null}
-          {success ? <div className="success-box">{success}</div> : null}
-          <button className="primary-btn">Submit Booking</button>
-        </form>
-      </section>
+    <div className={`content-grid${isAdmin ? '' : ' two-column'}`}>
+      {error ? <div className="error-box">{error}</div> : null}
+      {success ? <div className="success-box">{success}</div> : null}
+
+      {!isAdmin ? (
+        <section className="panel">
+          <div className="panel-header">
+            <h3>Book a Facility</h3>
+          </div>
+          <form className="form-grid" onSubmit={submitBooking}>
+            <label>Facility
+              <select name="facilityId" value={bookingForm.facilityId} onChange={handleBookingChange} required>
+                <option value="">Select a facility</option>
+                {activeFacilities.map((facility) => (
+                  <option key={facility.id} value={facility.id}>
+                    {facility.name} ({facility.type})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>Purpose
+              <textarea name="purpose" rows="3" value={bookingForm.purpose} onChange={handleBookingChange} required />
+            </label>
+            <label>Start Time
+              <input type="datetime-local" name="startTime" value={bookingForm.startTime} onChange={handleBookingChange} required />
+            </label>
+            <label>End Time
+              <input type="datetime-local" name="endTime" value={bookingForm.endTime} onChange={handleBookingChange} required />
+            </label>
+            <button className="primary-btn">Submit Booking</button>
+          </form>
+        </section>
+      ) : null}
 
       <section className="panel">
         <div className="panel-header">
