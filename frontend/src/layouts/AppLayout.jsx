@@ -10,10 +10,11 @@ export default function AppLayout() {
       <aside className="sidebar">
         <div>
           <h1 className="brand-title">Smart Campus</h1>
-          <p className="brand-subtitle">Modules C + D + E</p>
+          <p className="brand-subtitle">Modules B + C + D + E</p>
         </div>
         <nav className="nav-list">
           <NavLink to="/dashboard">Dashboard</NavLink>
+          <NavLink to="/bookings">Bookings</NavLink>
           <NavLink to="/tickets">Tickets</NavLink>
           <NavLink to="/notifications">Notifications</NavLink>
         </nav>

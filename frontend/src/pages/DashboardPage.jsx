@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { bookingService } from '../services/bookingService';
 import { ticketService } from '../services/ticketService';
 import { notificationService } from '../services/notificationService';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,6 +8,7 @@ import StatusBadge from '../components/StatusBadge';
 export default function DashboardPage() {
   const { token, user } = useAuth();
   const [tickets, setTickets] = useState([]);
+  const [bookings, setBookings] = useState([]);
   const [summary, setSummary] = useState({ unreadCount: 0 });
 
   useEffect(() => {
@@ -17,11 +19,17 @@ export default function DashboardPage() {
       ]);
       setTickets(ticketData);
       setSummary(summaryData);
+
+      const bookingData = user?.role === 'ADMIN'
+        ? await bookingService.getBookings(token)
+        : await bookingService.getMyBookings(token);
+      setBookings(bookingData);
     }
     load().catch(console.error);
-  }, [token]);
+  }, [token, user]);
 
   const openTickets = tickets.filter((ticket) => ['OPEN', 'IN_PROGRESS'].includes(ticket.status));
+  const pendingBookings = bookings.filter((booking) => booking.status === 'PENDING');
 
   return (
     <div className="content-grid">
@@ -37,6 +45,10 @@ export default function DashboardPage() {
         <article className="stat-card">
           <span>Unread Notifications</span>
           <strong>{summary.unreadCount || 0}</strong>
+        </article>
+        <article className="stat-card">
+          <span>Pending Bookings</span>
+          <strong>{pendingBookings.length}</strong>
         </article>
         <article className="stat-card">
           <span>Logged In As</span>
