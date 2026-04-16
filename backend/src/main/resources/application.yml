@@ -6,15 +6,10 @@ spring:
     name: smart-campus-backend
 
   datasource:
-    url: ${DB_URL:jdbc:h2:mem:smart_campus_db}
-    username: ${DB_USERNAME:sa}
-    password: ${DB_PASSWORD:}
-    driver-class-name: ${DB_DRIVER:org.h2.Driver}
-
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
@@ -23,7 +18,7 @@ spring:
     show-sql: false
     properties:
       hibernate:
-        dialect: ${HIBERNATE_DIALECT:org.hibernate.dialect.H2Dialect}
+        dialect: org.hibernate.dialect.PostgreSQLDialect
 
   servlet:
     multipart:
@@ -42,7 +37,7 @@ spring:
               - email
 
 app:
-  jwt-secret: ${JWT_SECRET:ThisIsASuperSecretJwtKeyForSmartCampusModulesCDE12345}
+  jwt-secret: ${JWT_SECRET}
   jwt-expiration-minutes: 480
   frontend-url: ${FRONTEND_URL:http://localhost:5173}
   upload-dir: ${UPLOAD_DIR:./uploads}

@@ -31,7 +31,7 @@ public class FileStorageService {
 
     public List<TicketAttachment> storeTicketFiles(Ticket ticket, User uploadedBy, List<MultipartFile> files) {
         if (files == null || files.isEmpty()) {
-            throw new BadRequestException("Please attach at least one file");
+            throw new BadRequestException("Please attach at least one image file");
         }
 
         List<TicketAttachment> attachments = new ArrayList<>();
@@ -39,6 +39,7 @@ public class FileStorageService {
         try {
             Files.createDirectories(ticketDir);
             for (MultipartFile file : files) {
+                validateImageFile(file);
                 String original = StringUtils.cleanPath(file.getOriginalFilename());
                 String stored = UUID.randomUUID() + "_" + original.replaceAll("\s+", "_");
                 Path target = ticketDir.resolve(stored);
@@ -49,7 +50,7 @@ public class FileStorageService {
                 attachment.setUploadedBy(uploadedBy);
                 attachment.setOriginalFileName(original);
                 attachment.setStoredFileName(stored);
-                attachment.setContentType(file.getContentType() == null ? "application/octet-stream" : file.getContentType());
+                attachment.setContentType(file.getContentType());
                 attachment.setFilePath(target.toString());
                 attachments.add(attachment);
             }
@@ -61,5 +62,15 @@ public class FileStorageService {
 
     public Resource loadAsResource(String path) {
         return new PathResource(Path.of(path));
+    }
+
+    private void validateImageFile(MultipartFile file) {
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.toLowerCase().startsWith("image/")) {
+            throw new BadRequestException("Only image attachments are allowed");
+        }
+        if (file.isEmpty()) {
+            throw new BadRequestException("Empty files cannot be uploaded");
+        }
     }
 }

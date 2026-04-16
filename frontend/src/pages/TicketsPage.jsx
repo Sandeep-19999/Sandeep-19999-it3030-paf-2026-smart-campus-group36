@@ -63,6 +63,7 @@ export default function TicketsPage() {
           <label>Resource Name<input name="resourceName" value={form.resourceName} onChange={handleChange} /></label>
           <label>Related Resource ID<input name="relatedResourceId" value={form.relatedResourceId} onChange={handleChange} /></label>
           <label>Preferred Contact<input name="preferredContact" value={form.preferredContact} onChange={handleChange} /></label>
+          <p className="muted-text">Image attachments can be added after creating the ticket from the ticket details page. Maximum 3 images.</p>
           {error ? <div className="error-box">{error}</div> : null}
           <button className="primary-btn" disabled={saving}>{saving ? 'Saving...' : 'Create Ticket'}</button>
         </form>
@@ -70,7 +71,7 @@ export default function TicketsPage() {
 
       <section className="panel">
         <div className="panel-header">
-          <h3>{user?.role === 'USER' ? 'My Tickets' : 'All Tickets'}</h3>
+          <h3>{user?.role === 'USER' ? 'My Tickets' : user?.role === 'TECHNICIAN' ? 'Assigned Tickets' : 'All Tickets'}</h3>
         </div>
         <div className="list-stack">
           {tickets.map((ticket) => (
