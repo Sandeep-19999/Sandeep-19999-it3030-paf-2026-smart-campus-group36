@@ -1,14 +1,25 @@
 package com.smartcampus.service;
 
-import com.smartcampus.dto.ticket.*;
-import com.smartcampus.entity.*;
+import com.smartcampus.dto.ticket.AttachmentResponse;
+import com.smartcampus.dto.ticket.CommentResponse;
+import com.smartcampus.dto.ticket.TicketCreateRequest;
+import com.smartcampus.dto.ticket.TicketResponse;
+import com.smartcampus.dto.ticket.TicketStatusUpdateRequest;
+import com.smartcampus.dto.ticket.UserSummaryResponse;
+import com.smartcampus.entity.Ticket;
+import com.smartcampus.entity.TicketAttachment;
+import com.smartcampus.entity.TicketComment;
+import com.smartcampus.entity.User;
 import com.smartcampus.enums.NotificationType;
 import com.smartcampus.enums.Role;
 import com.smartcampus.enums.TicketStatus;
 import com.smartcampus.exception.BadRequestException;
 import com.smartcampus.exception.ForbiddenOperationException;
 import com.smartcampus.exception.ResourceNotFoundException;
-import com.smartcampus.repository.*;
+import com.smartcampus.repository.TicketAttachmentRepository;
+import com.smartcampus.repository.TicketCommentRepository;
+import com.smartcampus.repository.TicketRepository;
+import com.smartcampus.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -43,14 +54,14 @@ public class TicketService {
 
     public TicketResponse createTicket(TicketCreateRequest request, User creator) {
         Ticket ticket = new Ticket();
-        ticket.setTitle(request.title());
-        ticket.setCategory(request.category());
-        ticket.setDescription(request.description());
+        ticket.setTitle(request.title().trim());
+        ticket.setCategory(request.category().trim());
+        ticket.setDescription(request.description().trim());
         ticket.setPriority(request.priority());
-        ticket.setLocationLabel(request.locationLabel());
-        ticket.setResourceName(request.resourceName());
-        ticket.setRelatedResourceId(request.relatedResourceId());
-        ticket.setPreferredContact(request.preferredContact());
+        ticket.setLocationLabel(request.locationLabel().trim());
+        ticket.setResourceName(blankToNull(request.resourceName()));
+        ticket.setRelatedResourceId(blankToNull(request.relatedResourceId()));
+        ticket.setPreferredContact(request.preferredContact().trim());
         ticket.setCreator(creator);
         Ticket saved = ticketRepository.save(ticket);
 
@@ -74,6 +85,11 @@ public class TicketService {
         if (currentUser.getRole() == Role.USER) {
             return getMyTickets(currentUser);
         }
+        if (currentUser.getRole() == Role.TECHNICIAN) {
+            return ticketRepository.findByAssignedTechnicianOrderByCreatedAtDesc(currentUser).stream()
+                    .map(ticket -> map(ticket, currentUser))
+                    .toList();
+        }
         return ticketRepository.findAllByOrderByCreatedAtDesc().stream()
                 .map(ticket -> map(ticket, currentUser))
                 .toList();
@@ -88,6 +104,9 @@ public class TicketService {
         requireAdmin(currentUser);
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket not found"));
+        if (ticket.getStatus() == TicketStatus.CLOSED || ticket.getStatus() == TicketStatus.REJECTED) {
+            throw new BadRequestException("Cannot assign a technician to a closed or rejected ticket");
+        }
         User technician = userRepository.findById(technicianId)
                 .orElseThrow(() -> new ResourceNotFoundException("Technician not found"));
         if (technician.getRole() != Role.TECHNICIAN) {
@@ -107,20 +126,21 @@ public class TicketService {
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket not found"));
         requireManagementAccess(ticket, currentUser);
+        validateStatusTransition(ticket, request.status(), currentUser);
 
-        if (request.status() == TicketStatus.REJECTED && (request.rejectionReason() == null || request.rejectionReason().isBlank())) {
+        if (request.status() == TicketStatus.REJECTED && isBlank(request.rejectionReason())) {
             throw new BadRequestException("Rejection reason is required when rejecting a ticket");
         }
-        if ((request.status() == TicketStatus.RESOLVED || request.status() == TicketStatus.CLOSED) && (request.resolutionNotes() == null || request.resolutionNotes().isBlank())) {
+        if ((request.status() == TicketStatus.RESOLVED || request.status() == TicketStatus.CLOSED) && isBlank(request.resolutionNotes())) {
             throw new BadRequestException("Resolution notes are required when resolving or closing a ticket");
         }
+
         ticket.setStatus(request.status());
-        if (request.rejectionReason() != null) {
-            ticket.setRejectionReason(request.rejectionReason());
-        }
-        if (request.resolutionNotes() != null) {
-            ticket.setResolutionNotes(request.resolutionNotes());
-        }
+        ticket.setRejectionReason(request.status() == TicketStatus.REJECTED ? request.rejectionReason().trim() : null);
+        ticket.setResolutionNotes((request.status() == TicketStatus.RESOLVED || request.status() == TicketStatus.CLOSED)
+                ? request.resolutionNotes().trim()
+                : ticket.getResolutionNotes());
+
         Ticket saved = ticketRepository.save(ticket);
         notificationService.create(ticket.getCreator(),
                 "Ticket status updated",
@@ -134,6 +154,9 @@ public class TicketService {
         Ticket ticket = requireTicketAccess(ticketId, currentUser);
         if (!(ticket.getCreator().getId().equals(currentUser.getId()) || currentUser.getRole() == Role.ADMIN)) {
             throw new ForbiddenOperationException("Only the ticket creator or admin can upload attachments");
+        }
+        if (ticket.getStatus() == TicketStatus.CLOSED || ticket.getStatus() == TicketStatus.REJECTED) {
+            throw new BadRequestException("Attachments cannot be added to a closed or rejected ticket");
         }
         if (ticket.getAttachments().size() + files.size() > 3) {
             throw new BadRequestException("A ticket can only have up to 3 attachments");
@@ -151,7 +174,7 @@ public class TicketService {
         TicketComment comment = new TicketComment();
         comment.setTicket(ticket);
         comment.setAuthor(currentUser);
-        comment.setContent(content);
+        comment.setContent(content.trim());
         ticketCommentRepository.save(comment);
         ticket.getComments().add(comment);
         ticketRepository.save(ticket);
@@ -179,7 +202,7 @@ public class TicketService {
         if (!(comment.getAuthor().getId().equals(currentUser.getId()) || currentUser.getRole() == Role.ADMIN)) {
             throw new ForbiddenOperationException("Only the owner or admin can edit this comment");
         }
-        comment.setContent(content);
+        comment.setContent(content.trim());
         return map(comment, currentUser);
     }
 
@@ -202,8 +225,14 @@ public class TicketService {
     private Ticket requireTicketAccess(Long ticketId, User currentUser) {
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket not found"));
-        if (currentUser.getRole() == Role.ADMIN || currentUser.getRole() == Role.TECHNICIAN) {
+        if (currentUser.getRole() == Role.ADMIN) {
             return ticket;
+        }
+        if (currentUser.getRole() == Role.TECHNICIAN) {
+            if (ticket.getAssignedTechnician() != null && ticket.getAssignedTechnician().getId().equals(currentUser.getId())) {
+                return ticket;
+            }
+            throw new ForbiddenOperationException("You can only access tickets assigned to you");
         }
         if (!ticket.getCreator().getId().equals(currentUser.getId())) {
             throw new ForbiddenOperationException("You do not have access to this ticket");
@@ -224,6 +253,43 @@ public class TicketService {
     private void requireAdmin(User currentUser) {
         if (currentUser.getRole() != Role.ADMIN) {
             throw new ForbiddenOperationException("Only admins can perform this action");
+        }
+    }
+
+    private void validateStatusTransition(Ticket ticket, TicketStatus nextStatus, User currentUser) {
+        TicketStatus currentStatus = ticket.getStatus();
+        if (currentStatus == nextStatus) {
+            return;
+        }
+        if (currentStatus == TicketStatus.CLOSED || currentStatus == TicketStatus.REJECTED) {
+            throw new BadRequestException("Closed or rejected tickets cannot be moved to a different status");
+        }
+        if (nextStatus == TicketStatus.REJECTED) {
+            if (currentUser.getRole() != Role.ADMIN) {
+                throw new ForbiddenOperationException("Only admins can reject tickets");
+            }
+            if (!(currentStatus == TicketStatus.OPEN || currentStatus == TicketStatus.IN_PROGRESS)) {
+                throw new BadRequestException("Tickets can only be rejected from OPEN or IN_PROGRESS status");
+            }
+            return;
+        }
+        switch (currentStatus) {
+            case OPEN -> {
+                if (nextStatus != TicketStatus.IN_PROGRESS) {
+                    throw new BadRequestException("OPEN tickets can only move to IN_PROGRESS");
+                }
+            }
+            case IN_PROGRESS -> {
+                if (nextStatus != TicketStatus.RESOLVED) {
+                    throw new BadRequestException("IN_PROGRESS tickets can only move to RESOLVED");
+                }
+            }
+            case RESOLVED -> {
+                if (nextStatus != TicketStatus.CLOSED) {
+                    throw new BadRequestException("RESOLVED tickets can only move to CLOSED");
+                }
+            }
+            default -> throw new BadRequestException("Invalid ticket status transition");
         }
     }
 
@@ -281,5 +347,13 @@ public class TicketService {
 
     private UserSummaryResponse map(User user) {
         return new UserSummaryResponse(user.getId(), user.getFullName(), user.getEmail(), user.getRole().name());
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    private String blankToNull(String value) {
+        return isBlank(value) ? null : value.trim();
     }
 }

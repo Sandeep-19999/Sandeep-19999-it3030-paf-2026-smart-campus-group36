@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/authService';
 import { ticketService } from '../services/ticketService';
-import { formatDate } from '../utils/helpers';
+import { formatDate, getAllowedTicketTransitions } from '../utils/helpers';
 import StatusBadge from '../components/StatusBadge';
 
 export default function TicketDetailsPage() {
@@ -15,10 +15,18 @@ export default function TicketDetailsPage() {
   const [statusForm, setStatusForm] = useState({ status: 'IN_PROGRESS', resolutionNotes: '', rejectionReason: '' });
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
 
   async function load() {
     const data = await ticketService.getTicketById(id, token);
     setTicket(data);
+    const allowedTransitions = getAllowedTicketTransitions(data.status, user?.role);
+    setStatusForm((prev) => ({
+      ...prev,
+      status: allowedTransitions[0] || data.status,
+      resolutionNotes: '',
+      rejectionReason: ''
+    }));
     if (user?.role === 'ADMIN') {
       const techs = await authService.getTechnicians(token);
       setTechnicians(techs);
@@ -26,56 +34,105 @@ export default function TicketDetailsPage() {
   }
 
   useEffect(() => {
-    if (token && user) load().catch(console.error);
+    if (token && user) load().catch((err) => setError(err.message));
   }, [id, token, user]);
+
+  const allowedTransitions = useMemo(
+    () => getAllowedTicketTransitions(ticket?.status, user?.role),
+    [ticket?.status, user?.role]
+  );
 
   if (!ticket) {
     return <div className="page-center">Loading ticket details...</div>;
   }
 
-  const canManage = user?.role === 'ADMIN' || user?.role === 'TECHNICIAN';
-  const canUpload = user?.role === 'ADMIN' || user?.id === ticket.creator?.id;
+  const isAssignedTechnician = user?.role === 'TECHNICIAN' && user?.id === ticket.assignedTechnician?.id;
+  const canManage = user?.role === 'ADMIN' || isAssignedTechnician;
+  const canUpload = (user?.role === 'ADMIN' || user?.id === ticket.creator?.id) && ticket.attachments.length < 3 && !['CLOSED', 'REJECTED'].includes(ticket.status);
 
   const handleAddComment = async (event) => {
     event.preventDefault();
-    await ticketService.addComment(ticket.id, comment, token);
-    setComment('');
-    setMessage('Comment added successfully.');
-    await load();
+    setError('');
+    setMessage('');
+    try {
+      await ticketService.addComment(ticket.id, comment, token);
+      setComment('');
+      setMessage('Comment added successfully.');
+      await load();
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   const handleStatusUpdate = async (event) => {
     event.preventDefault();
-    await ticketService.updateStatus(ticket.id, statusForm, token);
-    setMessage('Ticket status updated successfully.');
-    await load();
+    setError('');
+    setMessage('');
+    try {
+      await ticketService.updateStatus(ticket.id, statusForm, token);
+      setMessage('Ticket status updated successfully.');
+      await load();
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   const handleAssign = async (technicianId) => {
-    await ticketService.assignTechnician(ticket.id, Number(technicianId), token);
-    setMessage('Technician assigned successfully.');
-    await load();
+    setError('');
+    setMessage('');
+    try {
+      await ticketService.assignTechnician(ticket.id, Number(technicianId), token);
+      setMessage('Technician assigned successfully.');
+      await load();
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   const handleUpload = async (event) => {
     event.preventDefault();
+    setError('');
+    setMessage('');
     if (!selectedFiles.length) return;
-    await ticketService.addAttachments(ticket.id, selectedFiles, token);
-    setSelectedFiles([]);
-    setMessage('Attachments uploaded successfully.');
-    await load();
+    if (ticket.attachments.length + selectedFiles.length > 3) {
+      setError('A ticket can only contain up to 3 attachments.');
+      return;
+    }
+    const invalidFile = selectedFiles.find((file) => !file.type.startsWith('image/'));
+    if (invalidFile) {
+      setError('Only image attachments are allowed.');
+      return;
+    }
+    try {
+      await ticketService.addAttachments(ticket.id, selectedFiles, token);
+      setSelectedFiles([]);
+      setMessage('Attachments uploaded successfully.');
+      await load();
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   const handleCommentEdit = async (commentItem) => {
     const updated = window.prompt('Edit comment', commentItem.content);
     if (!updated) return;
-    await ticketService.updateComment(commentItem.id, updated, token);
-    await load();
+    setError('');
+    try {
+      await ticketService.updateComment(commentItem.id, updated, token);
+      await load();
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   const handleCommentDelete = async (commentId) => {
-    await ticketService.deleteComment(commentId, token);
-    await load();
+    setError('');
+    try {
+      await ticketService.deleteComment(commentId, token);
+      await load();
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   return (
@@ -99,6 +156,7 @@ export default function TicketDetailsPage() {
           {ticket.resolutionNotes ? <div className="full-span"><strong>Resolution Notes:</strong> {ticket.resolutionNotes}</div> : null}
         </div>
         {message ? <div className="success-box">{message}</div> : null}
+        {error ? <div className="error-box">{error}</div> : null}
       </section>
 
       {user?.role === 'ADMIN' ? (
@@ -116,40 +174,47 @@ export default function TicketDetailsPage() {
       {canManage ? (
         <section className="panel">
           <div className="panel-header"><h3>Update Status</h3></div>
-          <form className="form-grid" onSubmit={handleStatusUpdate}>
-            <label>Status
-              <select value={statusForm.status} onChange={(e) => setStatusForm((prev) => ({ ...prev, status: e.target.value }))}>
-                <option value="OPEN">OPEN</option>
-                <option value="IN_PROGRESS">IN_PROGRESS</option>
-                <option value="RESOLVED">RESOLVED</option>
-                <option value="CLOSED">CLOSED</option>
-                <option value="REJECTED">REJECTED</option>
-              </select>
-            </label>
-            <label>Resolution Notes<textarea rows="3" value={statusForm.resolutionNotes} onChange={(e) => setStatusForm((prev) => ({ ...prev, resolutionNotes: e.target.value }))} /></label>
-            <label>Rejection Reason<textarea rows="3" value={statusForm.rejectionReason} onChange={(e) => setStatusForm((prev) => ({ ...prev, rejectionReason: e.target.value }))} /></label>
-            <button className="primary-btn">Save Status</button>
-          </form>
+          {allowedTransitions.length ? (
+            <form className="form-grid" onSubmit={handleStatusUpdate}>
+              <label>Status
+                <select value={statusForm.status} onChange={(e) => setStatusForm((prev) => ({ ...prev, status: e.target.value }))}>
+                  {allowedTransitions.map((status) => (
+                    <option key={status} value={status}>{status}</option>
+                  ))}
+                </select>
+              </label>
+              <label>Resolution Notes<textarea rows="3" value={statusForm.resolutionNotes} onChange={(e) => setStatusForm((prev) => ({ ...prev, resolutionNotes: e.target.value }))} /></label>
+              {user?.role === 'ADMIN' ? (
+                <label>Rejection Reason<textarea rows="3" value={statusForm.rejectionReason} onChange={(e) => setStatusForm((prev) => ({ ...prev, rejectionReason: e.target.value }))} /></label>
+              ) : null}
+              <button className="primary-btn">Save Status</button>
+            </form>
+          ) : (
+            <p className="muted-text">No further status transitions are available for this ticket.</p>
+          )}
         </section>
       ) : null}
 
-      {canUpload ? (
-        <section className="panel">
-          <div className="panel-header"><h3>Attachments</h3></div>
+      <section className="panel">
+        <div className="panel-header"><h3>Attachments</h3></div>
+        {canUpload ? (
           <form className="form-grid" onSubmit={handleUpload}>
-            <input type="file" multiple onChange={(e) => setSelectedFiles(Array.from(e.target.files || []))} />
+            <input type="file" accept="image/*" multiple onChange={(e) => setSelectedFiles(Array.from(e.target.files || []))} />
+            <p className="muted-text">Only image files are allowed. Maximum 3 attachments per ticket.</p>
             <button className="secondary-btn">Upload Files</button>
           </form>
-          <div className="list-stack">
-            {ticket.attachments.map((attachment) => (
-              <button key={attachment.id} className="file-link" onClick={() => ticketService.downloadAttachment(attachment.id, token, attachment.originalFileName)}>
-                {attachment.originalFileName}
-              </button>
-            ))}
-            {!ticket.attachments.length ? <p className="muted-text">No attachments yet.</p> : null}
-          </div>
-        </section>
-      ) : null}
+        ) : (
+          <p className="muted-text">Attachments can be uploaded only by the ticket creator or an admin while the ticket is still active.</p>
+        )}
+        <div className="list-stack">
+          {ticket.attachments.map((attachment) => (
+            <button key={attachment.id} className="file-link" onClick={() => ticketService.downloadAttachment(attachment.id, token, attachment.originalFileName)}>
+              {attachment.originalFileName}
+            </button>
+          ))}
+          {!ticket.attachments.length ? <p className="muted-text">No attachments yet.</p> : null}
+        </div>
+      </section>
 
       <section className="panel">
         <div className="panel-header"><h3>Comments</h3></div>
