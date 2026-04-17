@@ -4,15 +4,51 @@ import StatusBadge from '../components/StatusBadge';
 import { bookingService } from '../services/bookingService';
 import { formatDate } from '../utils/helpers';
 
-function initialFacilityForm() {
-  return {
-    name: '',
-    type: '',
-    location: '',
-    capacity: 1,
-    description: '',
-    active: true
-  };
+const MAX_BOOKING_DURATION_MS = 4 * 60 * 60 * 1000;
+
+function toTimeValue(date) {
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
+function calculateEndTimeMax(startDateTimeValue) {
+  if (!startDateTimeValue) {
+    return '';
+  }
+  const start = new Date(startDateTimeValue);
+  if (Number.isNaN(start.getTime())) {
+    return '';
+  }
+  const maxByDuration = new Date(start.getTime() + MAX_BOOKING_DURATION_MS);
+  const endOfStartDay = new Date(start);
+  endOfStartDay.setHours(23, 59, 0, 0);
+  return toTimeValue(maxByDuration > endOfStartDay ? endOfStartDay : maxByDuration);
+}
+
+function getBookingTimeValidationMessage(startDateTimeValue, endTimeValue) {
+  if (!startDateTimeValue || !endTimeValue) {
+    return '';
+  }
+
+  const [startDate] = startDateTimeValue.split('T');
+  if (!startDate) {
+    return '';
+  }
+
+  const start = new Date(startDateTimeValue);
+  const end = new Date(`${startDate}T${endTimeValue}`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return '';
+  }
+
+  const diffMs = end.getTime() - start.getTime();
+  if (diffMs <= 0) {
+    return 'End time must be after start time';
+  }
+  if (diffMs > MAX_BOOKING_DURATION_MS) {
+    return 'Booking duration cannot exceed 4 hours';
+  }
+
+  return '';
 }
 
 function initialBookingForm() {
@@ -20,6 +56,7 @@ function initialBookingForm() {
     facilityId: '',
     purpose: '',
     startTime: '',
+    startDate: '',
     endTime: ''
   };
 }
@@ -29,8 +66,8 @@ export default function BookingsPage() {
   const isAdmin = user?.role === 'ADMIN';
   const [facilities, setFacilities] = useState([]);
   const [bookings, setBookings] = useState([]);
-  const [facilityForm, setFacilityForm] = useState(initialFacilityForm());
   const [bookingForm, setBookingForm] = useState(initialBookingForm());
+  const [bookingTimeError, setBookingTimeError] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(true);
@@ -44,10 +81,15 @@ export default function BookingsPage() {
     setLoading(true);
     setError('');
     try {
-      const [facilityData, bookingData] = await Promise.all([
-        bookingService.getFacilities(token),
-        isAdmin ? bookingService.getBookings(token) : bookingService.getMyBookings(token)
-      ]);
+      const bookingData = await (isAdmin
+        ? bookingService.getBookings(token)
+        : bookingService.getMyBookings(token));
+
+      let facilityData = [];
+      if (!isAdmin) {
+        facilityData = await bookingService.getFacilities(token);
+      }
+
       setFacilities(facilityData);
       setBookings(bookingData);
       setBookingForm((prev) => ({
@@ -67,70 +109,80 @@ export default function BookingsPage() {
     }
   }, [token, user]);
 
-  const handleFacilityChange = (event) => {
-    const { name, value, type, checked } = event.target;
-    setFacilityForm((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-  };
-
   const handleBookingChange = (event) => {
     const { name, value } = event.target;
-    setBookingForm((prev) => ({ ...prev, [name]: value }));
-  };
 
-  const submitFacility = async (event) => {
-    event.preventDefault();
-    setError('');
-    setSuccess('');
-    try {
-      await bookingService.createFacility({
-        ...facilityForm,
-        capacity: Number(facilityForm.capacity)
-      }, token);
-      setFacilityForm(initialFacilityForm());
-      setSuccess('Facility created successfully');
-      await loadData();
-    } catch (err) {
-      setError(err.message);
+    if (name === 'startTime') {
+      const [startDate = ''] = value.split('T');
+      const endTimeMax = calculateEndTimeMax(value);
+      let nextEndTime = bookingForm.endTime;
+
+      setBookingForm((prev) => {
+        const next = {
+          ...prev,
+          startTime: value,
+          startDate
+        };
+
+        if (next.endTime) {
+          const isAfterStart = new Date(`${startDate}T${next.endTime}`) > new Date(value);
+          const withinRange = !endTimeMax || next.endTime <= endTimeMax;
+          if (!isAfterStart || !withinRange) {
+            next.endTime = '';
+            nextEndTime = '';
+          }
+        }
+
+        return next;
+      });
+
+      setBookingTimeError(getBookingTimeValidationMessage(value, nextEndTime));
+      return;
     }
+
+    if (name === 'endTime') {
+      setBookingForm((prev) => {
+        const next = { ...prev, endTime: value };
+        setBookingTimeError(getBookingTimeValidationMessage(next.startTime, value));
+        return next;
+      });
+      return;
+    }
+
+    setBookingForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const submitBooking = async (event) => {
     event.preventDefault();
     setError('');
     setSuccess('');
+
+    const timeValidationMessage = getBookingTimeValidationMessage(
+      bookingForm.startTime,
+      bookingForm.endTime
+    );
+    if (!bookingForm.startDate) {
+      setError('Start time is required');
+      return;
+    }
+    if (timeValidationMessage) {
+      setBookingTimeError(timeValidationMessage);
+      setError(timeValidationMessage);
+      return;
+    }
+
+    const combinedEndTime = `${bookingForm.startDate}T${bookingForm.endTime}`;
+
     try {
       await bookingService.createBooking({
-        ...bookingForm,
-        facilityId: Number(bookingForm.facilityId)
+        facilityId: Number(bookingForm.facilityId),
+        purpose: bookingForm.purpose,
+        startTime: bookingForm.startTime,
+        endTime: combinedEndTime
       }, token);
       setBookingForm(initialBookingForm());
+      setBookingTimeError('');
       setSuccess('Booking submitted successfully');
-      await loadData();
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const updateFacilityStatus = async (facility) => {
-    setError('');
-    setSuccess('');
-    try {
-      await bookingService.updateFacility(
-        facility.id,
-        {
-          name: facility.name,
-          type: facility.type,
-          location: facility.location,
-          capacity: facility.capacity,
-          description: facility.description,
-          active: !facility.active
-        },
-        token
-      );
-      setSuccess(`Facility ${facility.active ? 'deactivated' : 'activated'}`);
       await loadData();
     } catch (err) {
       setError(err.message);
@@ -195,7 +247,18 @@ export default function BookingsPage() {
               <input type="datetime-local" name="startTime" value={bookingForm.startTime} onChange={handleBookingChange} required />
             </label>
             <label>End Time
-              <input type="datetime-local" name="endTime" value={bookingForm.endTime} onChange={handleBookingChange} required />
+              <input
+                type="time"
+                name="endTime"
+                value={bookingForm.endTime}
+                min={bookingForm.startTime ? toTimeValue(new Date(bookingForm.startTime)) : ''}
+                max={calculateEndTimeMax(bookingForm.startTime)}
+                onChange={handleBookingChange}
+                step="60"
+                disabled={!bookingForm.startTime}
+                required
+              />
+              {bookingTimeError ? <span className="danger-text">{bookingTimeError}</span> : null}
             </label>
             <button className="primary-btn">Submit Booking</button>
           </form>
@@ -235,46 +298,6 @@ export default function BookingsPage() {
           {!bookings.length && !loading ? <p className="muted-text">No booking requests found.</p> : null}
         </div>
       </section>
-
-      {isAdmin ? (
-        <section className="panel full-span">
-          <div className="panel-header">
-            <h3>Facility Administration</h3>
-          </div>
-          <div className="content-grid two-column">
-            <form className="form-grid" onSubmit={submitFacility}>
-              <label>Name<input name="name" value={facilityForm.name} onChange={handleFacilityChange} required /></label>
-              <label>Type<input name="type" value={facilityForm.type} onChange={handleFacilityChange} required /></label>
-              <label>Location<input name="location" value={facilityForm.location} onChange={handleFacilityChange} required /></label>
-              <label>Capacity<input type="number" min="1" name="capacity" value={facilityForm.capacity} onChange={handleFacilityChange} required /></label>
-              <label>Description<textarea rows="3" name="description" value={facilityForm.description} onChange={handleFacilityChange} required /></label>
-              <label className="inline-checkbox">
-                <input type="checkbox" name="active" checked={facilityForm.active} onChange={handleFacilityChange} />
-                Active
-              </label>
-              <button className="primary-btn">Create Facility</button>
-            </form>
-            <div className="list-stack">
-              {facilities.map((facility) => (
-                <div key={facility.id} className="ticket-row">
-                  <div>
-                    <strong>{facility.name}</strong>
-                    <p className="muted-text">{facility.type} | {facility.location} | Capacity {facility.capacity}</p>
-                  </div>
-                  <div className="ticket-right">
-                    <span className={`badge ${facility.active ? 'badge-approved' : 'badge-cancelled'}`}>
-                      {facility.active ? 'ACTIVE' : 'INACTIVE'}
-                    </span>
-                    <button className="text-btn" onClick={() => updateFacilityStatus(facility)}>
-                      {facility.active ? 'Deactivate' : 'Activate'}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      ) : null}
     </div>
   );
 }
