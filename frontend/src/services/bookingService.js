@@ -10,12 +10,6 @@ export const bookingService = {
   getMyBookings(token) {
     return apiRequest('/api/bookings/mine', { token });
   },
-  createFacility(payload, token) {
-    return apiRequest('/api/facilities', { method: 'POST', body: payload, token });
-  },
-  updateFacility(id, payload, token) {
-    return apiRequest(`/api/facilities/${id}`, { method: 'PUT', body: payload, token });
-  },
   createBooking(payload, token) {
     return apiRequest('/api/bookings', { method: 'POST', body: payload, token });
   },
