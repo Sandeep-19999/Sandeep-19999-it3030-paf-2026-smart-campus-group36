@@ -9,6 +9,7 @@ export default function AppLayout() {
   const { user, logout } = useAuth();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [avatarVisible, setAvatarVisible] = useState(true);
+  const [brandLogoVisible, setBrandLogoVisible] = useState(true);
   const profileMenuRef = useRef(null);
   const campusIdMatch = user?.email?.match(/^(IT\d{8})@my\.sliit\.lk$/i);
   const campusId = campusIdMatch ? campusIdMatch[1].toUpperCase() : '';
@@ -67,11 +68,24 @@ export default function AppLayout() {
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <div>
-          <h1 className="brand-title">Smart Campus</h1>
-
+        <div className="brand-block">
+          <span className="brand-mark" aria-hidden="true">
+            {brandLogoVisible ? (
+              <img
+                src="/smartcampus-logo.jpg"
+                alt=""
+                className="brand-mark-image"
+                onError={() => setBrandLogoVisible(false)}
+              />
+            ) : 'SC'}
+          </span>
+          <h1 className="brand-title">SmartCampus</h1>
         </div>
         <nav className="nav-list">
+          <NavLink to="/" title="Go to home page">
+            <span className="nav-home-icon" aria-hidden="true">⌂</span>
+            <span>Home</span>
+          </NavLink>
           <NavLink to="/app/dashboard">Dashboard</NavLink>
           {user?.role === 'ADMIN' ? <NavLink to="/app/admin">Admin</NavLink> : null}
           <NavLink to="/app/bookings">Bookings</NavLink>

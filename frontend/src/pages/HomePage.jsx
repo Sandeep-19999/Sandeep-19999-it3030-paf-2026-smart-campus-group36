@@ -15,6 +15,7 @@ const HERO_IMAGE_CANDIDATES = [
 export default function HomePage() {
   const { isAuthenticated, user, logout } = useAuth();
   const [heroImageIndex, setHeroImageIndex] = useState(0);
+  const [logoVisible, setLogoVisible] = useState(true);
 
   const handleHeroImageError = () => {
     setHeroImageIndex((index) => Math.min(index + 1, HERO_IMAGE_CANDIDATES.length - 1));
@@ -24,7 +25,16 @@ export default function HomePage() {
     <div className="course-home-shell">
       <header className="course-top-header">
         <div className="course-brand-block">
-          <div className="course-brand-logo">SC</div>
+          <div className="course-brand-logo" aria-hidden="true">
+            {logoVisible ? (
+              <img
+                src="/smartcampus-logo.jpg"
+                alt=""
+                className="course-brand-logo-image"
+                onError={() => setLogoVisible(false)}
+              />
+            ) : 'SC'}
+          </div>
           <div>
             <h1 className="course-brand-title">SmartCampus | CourseHub</h1>
             <p className="course-brand-subtitle">Digital Learning and Facilities Portal</p>
