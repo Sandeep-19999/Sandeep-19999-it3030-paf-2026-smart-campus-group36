@@ -44,6 +44,7 @@ public class SeedDataConfig {
             User admin = new User();
             admin.setFullName("System Admin");
             admin.setEmail("admin@smartcampus.local");
+            admin.setUniversityId("IT00000001");
             admin.setPasswordHash(passwordEncoder.encode("Admin@123"));
             admin.setRole(Role.ADMIN);
             admin.setAuthProvider(AuthProvider.LOCAL);
@@ -52,6 +53,7 @@ public class SeedDataConfig {
             User technician = new User();
             technician.setFullName("Main Technician");
             technician.setEmail("tech@smartcampus.local");
+            technician.setUniversityId("IT00000002");
             technician.setPasswordHash(passwordEncoder.encode("Tech@123"));
             technician.setRole(Role.TECHNICIAN);
             technician.setAuthProvider(AuthProvider.LOCAL);
@@ -60,6 +62,7 @@ public class SeedDataConfig {
             User student = new User();
             student.setFullName("Campus User");
             student.setEmail("user@smartcampus.local");
+            student.setUniversityId("IT00000003");
             student.setPasswordHash(passwordEncoder.encode("User@123"));
             student.setRole(Role.USER);
             student.setAuthProvider(AuthProvider.LOCAL);

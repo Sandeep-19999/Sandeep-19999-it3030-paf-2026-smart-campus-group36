@@ -4,6 +4,7 @@ import { ticketService } from '../services/ticketService';
 import { notificationService } from '../services/notificationService';
 import { useAuth } from '../contexts/AuthContext';
 import StatusBadge from '../components/StatusBadge';
+import { formatRoleLabel } from '../utils/helpers';
 
 export default function DashboardPage() {
   const { token, user } = useAuth();
@@ -38,7 +39,7 @@ export default function DashboardPage() {
           <p className="dashboard-kicker">Welcome back</p>
           <h3>{user?.fullName || 'User'} Dashboard</h3>
           <p className="muted-text">
-            You are signed in as <strong>{user?.role}</strong>. This view shows your current tickets, bookings, and notifications.
+            You are signed in as <strong>{formatRoleLabel(user?.role)}</strong>. This view shows your current tickets, bookings, and notifications.
           </p>
         </div>
         <div className="dashboard-user-chip">
@@ -67,7 +68,7 @@ export default function DashboardPage() {
         </article>
         <article className="stat-card">
           <span>Logged In As</span>
-          <strong>{user?.role}</strong>
+          <strong>{formatRoleLabel(user?.role)}</strong>
         </article>
       </section>
 

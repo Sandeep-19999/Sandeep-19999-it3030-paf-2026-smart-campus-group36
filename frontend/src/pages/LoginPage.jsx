@@ -1,38 +1,22 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-const LOGIN_VARIANTS = {
-  staff: {
-    title: 'Staff Login',
-    subtitle: 'Use an admin or technician account to manage campus operations.',
-    submitLabel: 'Sign in as staff',
-    accounts: [
-      { role: 'Admin', email: 'admin@smartcampus.local', password: 'Admin@123' },
-      { role: 'Technician', email: 'tech@smartcampus.local', password: 'Tech@123' }
-    ]
-  },
-  student: {
-    title: 'Student Login',
-    subtitle: 'Use a student account to access bookings, tickets, and resources.',
-    submitLabel: 'Sign in as student',
-    accounts: [
-      { role: 'Student', email: 'user@smartcampus.local', password: 'User@123' }
-    ]
-  }
-};
-
-export default function LoginPage({ variant = 'staff' }) {
-  const { devLogin } = useAuth();
+export default function LoginPage() {
+  const { devLogin, isAuthenticated, loading, user } = useAuth();
   const navigate = useNavigate();
-  const loginVariant = LOGIN_VARIANTS[variant] || LOGIN_VARIANTS.staff;
   const [form, setForm] = useState({
-    email: loginVariant.accounts[0].email,
-    password: loginVariant.accounts[0].password
+    email: '',
+    password: ''
   });
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const backendOrigin = useMemo(() => import.meta.env.VITE_BACKEND_ORIGIN || 'http://localhost:8080', []);
+
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      navigate(user?.role === 'ADMIN' ? '/app/admin' : '/app/dashboard', { replace: true });
+    }
+  }, [loading, isAuthenticated, user, navigate]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -40,7 +24,7 @@ export default function LoginPage({ variant = 'staff' }) {
     setError('');
     try {
       const currentUser = await devLogin(form);
-      navigate(currentUser?.role === 'ADMIN' ? '/app/admin' : '/app/dashboard');
+      navigate('/');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -50,53 +34,43 @@ export default function LoginPage({ variant = 'staff' }) {
 
   return (
     <div className="login-shell">
-      <div className="login-card">
-        <div>
-          <h1>Smart Campus Operations Hub</h1>
-          <p className="muted-text">{loginVariant.title} for Modules A, B, C, D and E.</p>
-          <p className="login-role-copy">{loginVariant.subtitle}</p>
-        </div>
+      <div className="auth-card">
+        <h1 className="auth-title">Login</h1>
+        <p className="auth-subtitle">Sign in as Student, Admin, or Lecturer.</p>
 
-        <form onSubmit={handleSubmit} className="form-grid">
+        <form onSubmit={handleSubmit} className="auth-form-grid" noValidate>
           <label>
             Email
-            <input value={form.email} onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))} />
+            <input
+              type="email"
+              placeholder="you@uni.edu"
+              value={form.email}
+              onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+              required
+            />
           </label>
           <label>
             Password
-            <input type="password" value={form.password} onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))} />
+            <input
+              type="password"
+              placeholder="........"
+              value={form.password}
+              onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
+              required
+            />
           </label>
+
           {error ? <div className="error-box">{error}</div> : null}
-          <button type="submit" className="primary-btn" disabled={submitting}>
-            {submitting ? 'Signing in...' : loginVariant.submitLabel}
+
+          <button type="submit" className="primary-btn auth-submit" disabled={submitting}>
+            {submitting ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
 
-        <div className="quick-login-grid">
-          {loginVariant.accounts.map((account) => (
-            <button
-              key={account.role}
-              type="button"
-              className="quick-login-card"
-              onClick={() => setForm({ email: account.email, password: account.password })}
-            >
-              <strong>{account.role}</strong>
-              <span>{account.email}</span>
-            </button>
-          ))}
-        </div>
-
-        {variant === 'student' ? (
-          <p className="muted-text small-text">
-            New student? <Link to="/register/student" className="text-btn">Register first</Link>
-          </p>
-        ) : null}
-
-        <div className="separator">or</div>
-        <a className="secondary-btn full-width-anchor" href={`${backendOrigin}/oauth2/authorization/google`}>
-          Continue with Google OAuth
-        </a>
-        <p className="muted-text small-text">Google login will work after adding GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in the backend environment.</p>
+        <p className="muted-text auth-meta-text">
+          No account? <Link to="/auth/register" className="text-btn">Register</Link>
+        </p>
+        <Link to="/" className="text-btn auth-back-link">Back to landing</Link>
       </div>
     </div>
   );

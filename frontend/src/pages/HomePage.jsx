@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import RealtimeCalendar from '../components/RealtimeCalendar';
 
 const HERO_IMAGE_CANDIDATES = [
   '/homepage-students.jpg',
@@ -11,6 +13,7 @@ const HERO_IMAGE_CANDIDATES = [
 ];
 
 export default function HomePage() {
+  const { isAuthenticated, user, logout } = useAuth();
   const [heroImageIndex, setHeroImageIndex] = useState(0);
 
   const handleHeroImageError = () => {
@@ -28,12 +31,27 @@ export default function HomePage() {
           </div>
         </div>
         <div className="course-account-box">
-          <p>Log in using your smart campus account</p>
-          <div className="course-login-actions">
-            <Link to="/login/staff" className="course-login-link">Staff Login</Link>
-            <Link to="/login/student" className="course-login-link">Student Login</Link>
-            <Link to="/register/student" className="course-login-link">Student Register</Link>
-          </div>
+          {isAuthenticated ? (
+            <>
+              <p className="course-auth-kicker">Signed in</p>
+              <div className="course-user-summary course-user-summary-elevated">
+                <strong>{user?.fullName}</strong>
+                <span className="course-user-email">{user?.email}</span>
+              </div>
+              <div className="course-login-actions">
+                <Link to="/app/dashboard" className="course-login-link course-login-link-primary">Dashboard</Link>
+                <button type="button" className="course-login-link course-login-link-ghost" onClick={logout}>Logout</button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p>Access your smart campus account</p>
+              <div className="course-login-actions">
+                <Link to="/auth/login" className="course-login-link">Login</Link>
+                <Link to="/auth/register" className="course-login-link">Register</Link>
+              </div>
+            </>
+          )}
         </div>
       </header>
 
@@ -55,7 +73,9 @@ export default function HomePage() {
           </p>
           <div className="course-hero-actions">
             <Link to="/facilities" className="primary-btn">View Facilities</Link>
-            <Link to="/login/staff" className="secondary-btn">Open Staff Portal</Link>
+            <Link to={isAuthenticated ? '/app/dashboard' : '/auth/login'} className="secondary-btn">
+              {isAuthenticated ? 'Open Dashboard' : 'Open Portal'}
+            </Link>
           </div>
         </div>
         <div className="course-hero-visual" aria-hidden="true">
@@ -76,14 +96,7 @@ export default function HomePage() {
           <p>+94 11 754 4801</p>
           <button className="course-feedback-btn" type="button">Provide Feedback</button>
         </div>
-        <div className="course-calendar-box">
-          <h3>Calendar</h3>
-          <div className="course-calendar-grid">
-            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
-            <span className="muted">6</span><span className="muted">7</span><span className="muted">8</span><span className="muted">9</span><span className="course-active-day">10</span><span className="muted">11</span><span className="muted">12</span>
-          </div>
-          <a href="#">Full calendar</a>
-        </div>
+        <RealtimeCalendar />
       </section>
 
       <footer className="course-footer">

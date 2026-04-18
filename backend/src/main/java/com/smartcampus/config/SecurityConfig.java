@@ -48,6 +48,7 @@ public class SecurityConfig {
                                 "/api/auth/dev-login",
                                 "/api/auth/register",
                                 "/api/auth/oauth-info",
+                            "/api/auth/avatar/**",
                                 "/oauth2/**",
                                 "/login/oauth2/**"
                         ).permitAll()

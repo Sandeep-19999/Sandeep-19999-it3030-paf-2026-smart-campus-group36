@@ -13,6 +13,10 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      data-source-properties:
+        preferQueryMode: simple
+        prepareThreshold: 0
 
   jpa:
     hibernate:
@@ -45,3 +49,5 @@ app:
   frontend-url: ${FRONTEND_URL:http://localhost:5173}
   upload-dir: ${UPLOAD_DIR:./uploads}
   cors-allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}
+  registration:
+    admin-passcode: ${ADMIN_REGISTRATION_PASSCODE:1234}

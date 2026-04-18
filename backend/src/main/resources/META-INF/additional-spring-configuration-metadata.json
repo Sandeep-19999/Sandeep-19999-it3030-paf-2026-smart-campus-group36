@@ -31,6 +31,11 @@
       "name": "app.cors-allowed-origins",
       "type": "java.lang.String",
       "description": "Comma-separated list of allowed CORS origins."
+    },
+    {
+      "name": "app.registration.admin-passcode",
+      "type": "java.lang.String",
+      "description": "Passcode required when a user registers with ADMIN role."
     }
   ]
 }

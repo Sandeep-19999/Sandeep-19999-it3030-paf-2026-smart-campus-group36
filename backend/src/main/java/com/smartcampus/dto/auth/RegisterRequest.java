@@ -1,5 +1,7 @@
 package com.smartcampus.dto.auth;
 
+import com.smartcampus.enums.Role;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -19,6 +21,8 @@ public record RegisterRequest(
                 message = "Password must contain at least one letter, one number, and one special character"
         )
         String password,
-        @NotBlank String confirmPassword
+        @NotBlank String confirmPassword,
+        @NotNull Role role,
+        @Size(max = 120) String adminPasscode
 ) {
 }

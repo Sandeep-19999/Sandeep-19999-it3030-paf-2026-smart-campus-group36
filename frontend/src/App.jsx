@@ -9,6 +9,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import NotificationsPage from './pages/NotificationsPage';
 import OAuthSuccessPage from './pages/OAuthSuccessPage';
+import ProfilePage from './pages/ProfilePage';
 import ResourcesPage from './pages/ResourcesPage';
 import TicketDetailsPage from './pages/TicketDetailsPage';
 import TicketsPage from './pages/TicketsPage';
@@ -38,11 +39,12 @@ export default function App() {
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/facilities" element={<FacilitiesPage />} />
-      <Route path="/login" element={<Navigate to="/login/staff" replace />} />
-      <Route path="/login/staff" element={<LoginPage variant="staff" />} />
-      <Route path="/login/student" element={<LoginPage variant="student" />} />
-      <Route path="/register" element={<Navigate to="/register/student" replace />} />
-      <Route path="/register/student" element={<RegisterPage />} />
+      <Route path="/auth/login" element={<LoginPage />} />
+      <Route path="/auth/register" element={<RegisterPage />} />
+      <Route path="/login" element={<Navigate to="/auth/login" replace />} />
+      <Route path="/register" element={<Navigate to="/auth/register" replace />} />
+      <Route path="/login/*" element={<Navigate to="/auth/login" replace />} />
+      <Route path="/register/*" element={<Navigate to="/auth/register" replace />} />
       <Route path="/oauth-success" element={<OAuthSuccessPage />} />
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
       <Route
@@ -65,6 +67,7 @@ export default function App() {
         />
         <Route path="bookings" element={<BookingsPage />} />
         <Route path="resources" element={<ResourcesPage />} />
+        <Route path="profile" element={<ProfilePage />} />
         <Route path="tickets" element={<TicketsPage />} />
         <Route path="tickets/:id" element={<TicketDetailsPage />} />
         <Route path="notifications" element={<NotificationsPage />} />

@@ -13,6 +13,11 @@ export const authService = {
   getTechnicians(token) {
     return apiRequest('/api/auth/technicians', { token });
   },
+  uploadAvatar(token, file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiRequest('/api/auth/avatar', { method: 'POST', token, body: formData, isFormData: true });
+  },
   logout(token) {
     return apiRequest('/api/auth/logout', { method: 'POST', token });
   }
