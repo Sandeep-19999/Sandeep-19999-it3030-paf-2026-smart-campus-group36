@@ -11,6 +11,7 @@ import com.smartcampus.repository.ResourceRepository;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -45,6 +46,12 @@ public class ResourceService {
         }
 
         return specification == null ? resourceRepository.findAll() : resourceRepository.findAll(specification);
+    }
+
+    public List<Resource> getActiveResources() {
+        return getResources(null, null, null, Status.ACTIVE).stream()
+                .sorted(Comparator.comparing(Resource::getName, String.CASE_INSENSITIVE_ORDER))
+                .toList();
     }
 
     public Resource getResourceById(Long id) {

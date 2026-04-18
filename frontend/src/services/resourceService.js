@@ -15,6 +15,9 @@ export const resourceService = {
   getResources(filters = {}, token) {
     return apiRequest(`/api/resources${buildQuery(filters)}`, { token });
   },
+  getActiveResources(token) {
+    return apiRequest('/api/resources/active', { token });
+  },
   getResourceById(id, token) {
     return apiRequest(`/api/resources/${id}`, { token });
   },

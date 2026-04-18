@@ -34,6 +34,11 @@ public class ResourceController {
         this.authService = authService;
     }
 
+    @GetMapping("/active")
+    public List<Resource> getActiveResources() {
+        return resourceService.getActiveResources();
+    }
+
     @GetMapping
     public List<Resource> getResources(
             @RequestParam(required = false) String type,

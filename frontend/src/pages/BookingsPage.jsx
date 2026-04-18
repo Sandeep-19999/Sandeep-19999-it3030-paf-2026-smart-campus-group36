@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import BookingFiltersPanel from '../components/BookingFiltersPanel';
 import StatusBadge from '../components/StatusBadge';
 import { bookingService } from '../services/bookingService';
+import { resourceService } from '../services/resourceService';
 import { formatDate } from '../utils/helpers';
 
 const MAX_BOOKING_DURATION_MS = 4 * 60 * 60 * 1000;
@@ -61,53 +63,116 @@ function initialBookingForm() {
   };
 }
 
+function initialFilterState() {
+  return {
+    status: 'ALL',
+    facility: '',
+    user: '',
+    startDate: ''
+  };
+}
+
 export default function BookingsPage() {
   const { token, user } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
-  const [facilities, setFacilities] = useState([]);
+  const [activeResources, setActiveResources] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [bookingForm, setBookingForm] = useState(initialBookingForm());
   const [bookingTimeError, setBookingTimeError] = useState('');
+  const [facilityError, setFacilityError] = useState('');
+  const [filterError, setFilterError] = useState('');
+  const [filters, setFilters] = useState(initialFilterState());
+  const [appliedFilters, setAppliedFilters] = useState(initialFilterState());
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(true);
+  const [resourceLoading, setResourceLoading] = useState(false);
 
-  const activeFacilities = useMemo(
-    () => facilities.filter((facility) => facility.active),
-    [facilities]
+  const sortedActiveResources = useMemo(
+    () => [...activeResources].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })),
+    [activeResources]
   );
 
-  async function loadData() {
+  function validateFilters(nextFilters) {
+    return '';
+  }
+
+  async function loadData(nextFilters = appliedFilters) {
     setLoading(true);
+    setResourceLoading(true);
     setError('');
+    setFacilityError('');
     try {
       const bookingData = await (isAdmin
-        ? bookingService.getBookings(token)
+        ? bookingService.getBookings(nextFilters, token)
         : bookingService.getMyBookings(token));
 
-      let facilityData = [];
+      let resourceData = [];
       if (!isAdmin) {
-        facilityData = await bookingService.getFacilities(token);
+        try {
+          const response = await resourceService.getActiveResources(token);
+          resourceData = Array.isArray(response)
+            ? response.filter((resource) => String(resource.status || '').toUpperCase() === 'ACTIVE')
+            : [];
+        } catch (resourceErr) {
+          setFacilityError('Failed to load active resources');
+          resourceData = [];
+          console.error('Active resource fetch failed:', resourceErr);
+        }
       }
 
-      setFacilities(facilityData);
+      setActiveResources(resourceData);
       setBookings(bookingData);
       setBookingForm((prev) => ({
         ...prev,
-        facilityId: prev.facilityId || (facilityData[0]?.id ? String(facilityData[0].id) : '')
+        facilityId: resourceData.some((resource) => String(resource.id) === String(prev.facilityId))
+          ? prev.facilityId
+          : (resourceData[0]?.id ? String(resourceData[0].id) : '')
       }));
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
+      setResourceLoading(false);
     }
   }
 
   useEffect(() => {
     if (token && user) {
-      loadData().catch(console.error);
+      loadData(appliedFilters).catch(console.error);
     }
   }, [token, user]);
+
+  const handleFilterChange = (event) => {
+    const { name, value } = event.target;
+    setFilters((prev) => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const applyFilters = async () => {
+    const validationMessage = validateFilters(filters);
+    if (validationMessage) {
+      setFilterError(validationMessage);
+      setError(validationMessage);
+      return;
+    }
+
+    setFilterError('');
+    setError('');
+    setAppliedFilters({ ...filters });
+    await loadData(filters);
+  };
+
+  const resetFilters = async () => {
+    const defaults = initialFilterState();
+    setFilters(defaults);
+    setAppliedFilters(defaults);
+    setFilterError('');
+    setError('');
+    await loadData(defaults);
+  };
 
   const handleBookingChange = (event) => {
     const { name, value } = event.target;
@@ -156,6 +221,24 @@ export default function BookingsPage() {
     event.preventDefault();
     setError('');
     setSuccess('');
+    setFacilityError('');
+
+    if (!bookingForm.facilityId) {
+      const message = 'Please select an active facility';
+      setFacilityError(message);
+      setError(message);
+      return;
+    }
+
+    const selectedStillActive = sortedActiveResources.some(
+      (resource) => String(resource.id) === String(bookingForm.facilityId)
+    );
+    if (!selectedStillActive) {
+      const message = 'Selected resource is no longer active';
+      setFacilityError(message);
+      setError(message);
+      return;
+    }
 
     const timeValidationMessage = getBookingTimeValidationMessage(
       bookingForm.startTime,
@@ -182,6 +265,7 @@ export default function BookingsPage() {
       }, token);
       setBookingForm(initialBookingForm());
       setBookingTimeError('');
+      setFacilityError('');
       setSuccess('Booking submitted successfully');
       await loadData();
     } catch (err) {
@@ -220,7 +304,7 @@ export default function BookingsPage() {
   };
 
   return (
-    <div className={`content-grid${isAdmin ? '' : ' two-column'}`}>
+    <div className="content-grid two-column">
       {error ? <div className="error-box">{error}</div> : null}
       {success ? <div className="success-box">{success}</div> : null}
 
@@ -229,41 +313,68 @@ export default function BookingsPage() {
           <div className="panel-header">
             <h3>Book a Facility</h3>
           </div>
-          <form className="form-grid" onSubmit={submitBooking}>
-            <label>Facility
-              <select name="facilityId" value={bookingForm.facilityId} onChange={handleBookingChange} required>
-                <option value="">Select a facility</option>
-                {activeFacilities.map((facility) => (
-                  <option key={facility.id} value={facility.id}>
-                    {facility.name} ({facility.type})
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>Purpose
-              <textarea name="purpose" rows="3" value={bookingForm.purpose} onChange={handleBookingChange} required />
-            </label>
-            <label>Start Time
-              <input type="datetime-local" name="startTime" value={bookingForm.startTime} onChange={handleBookingChange} required />
-            </label>
-            <label>End Time
-              <input
-                type="time"
-                name="endTime"
-                value={bookingForm.endTime}
-                min={bookingForm.startTime ? toTimeValue(new Date(bookingForm.startTime)) : ''}
-                max={calculateEndTimeMax(bookingForm.startTime)}
-                onChange={handleBookingChange}
-                step="60"
-                disabled={!bookingForm.startTime}
-                required
-              />
-              {bookingTimeError ? <span className="danger-text">{bookingTimeError}</span> : null}
-            </label>
-            <button className="primary-btn">Submit Booking</button>
-          </form>
+          {facilityError ? <div className="error-box">{facilityError}</div> : null}
+          {!resourceLoading && !sortedActiveResources.length ? (
+            <div className="empty-state">
+              <p className="muted-text">No active facilities available</p>
+            </div>
+          ) : (
+            <form className="form-grid" onSubmit={submitBooking}>
+              <label>Facility
+                {resourceLoading ? (
+                  <div className="disabled-select">
+                    <p className="muted-text">Loading resources...</p>
+                  </div>
+                ) : (
+                  <select name="facilityId" value={bookingForm.facilityId} onChange={handleBookingChange} required>
+                    <option value="">Select a facility</option>
+                    {sortedActiveResources.map((resource) => (
+                      <option key={resource.id} value={resource.id}>
+                        {resource.name} ({resource.type})
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </label>
+              <label>Purpose
+                <textarea name="purpose" rows="3" value={bookingForm.purpose} onChange={handleBookingChange} required />
+              </label>
+              <label>Start Time
+                <input type="datetime-local" name="startTime" value={bookingForm.startTime} onChange={handleBookingChange} required />
+              </label>
+              <label>End Time
+                <input
+                  type="time"
+                  name="endTime"
+                  value={bookingForm.endTime}
+                  min={bookingForm.startTime ? toTimeValue(new Date(bookingForm.startTime)) : ''}
+                  max={calculateEndTimeMax(bookingForm.startTime)}
+                  onChange={handleBookingChange}
+                  step="60"
+                  disabled={!bookingForm.startTime}
+                  required
+                />
+                {bookingTimeError ? <span className="danger-text">{bookingTimeError}</span> : null}
+              </label>
+              <button
+                className="primary-btn"
+                disabled={!bookingForm.facilityId || !sortedActiveResources.length || resourceLoading}
+              >
+                Submit Booking
+              </button>
+            </form>
+          )}
         </section>
-      ) : null}
+      ) : (
+        <BookingFiltersPanel
+          filters={filters}
+          onChange={handleFilterChange}
+          onApply={applyFilters}
+          onReset={resetFilters}
+          loading={loading}
+          error={filterError}
+        />
+      )}
 
       <section className="panel">
         <div className="panel-header">
@@ -295,7 +406,7 @@ export default function BookingsPage() {
               </div>
             </div>
           ))}
-          {!bookings.length && !loading ? <p className="muted-text">No booking requests found.</p> : null}
+          {!bookings.length && !loading ? <p className="muted-text">No bookings found</p> : null}
         </div>
       </section>
     </div>

@@ -22,7 +22,7 @@ export default function DashboardPage() {
       setSummary(summaryData);
 
       const bookingData = user?.role === 'ADMIN'
-        ? await bookingService.getBookings(token)
+        ? await bookingService.getBookings({}, token)
         : await bookingService.getMyBookings(token);
       setBookings(bookingData);
     }

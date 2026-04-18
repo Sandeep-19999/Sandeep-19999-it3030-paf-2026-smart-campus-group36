@@ -95,8 +95,31 @@ label { display: grid; gap: 0.4rem; font-weight: 600; color: #334155; }
 .primary-btn:hover {
   box-shadow: 0 14px 26px rgba(3, 84, 171, 0.32);
 }
+.primary-btn:disabled {
+  background: linear-gradient(140deg, #94a3b8 0%, #64748b 100%);
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+}
 .danger-text { color: #dc2626; }
 .full-width-anchor { width: 100%; }
+
+.empty-state {
+  border: 1px dashed #cbd5e1;
+  border-radius: 14px;
+  min-height: 140px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 1rem;
+}
+
+.disabled-select {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  padding: 0.8rem 0.95rem;
+}
 
 .page-center {
   min-height: 100vh;
@@ -637,6 +660,20 @@ label { display: grid; gap: 0.4rem; font-weight: 600; color: #334155; }
 .muted-text { color: #64748b; margin: 0; }
 .booking-row { align-items: flex-start; }
 .booking-actions { min-width: 120px; }
+.booking-filter-card {
+  display: grid;
+  gap: 0.95rem;
+  height: fit-content;
+}
+.booking-filter-grid {
+  display: grid;
+  gap: 0.8rem;
+}
+.booking-filter-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
 .inline-checkbox {
   display: flex;
   align-items: center;
@@ -1195,6 +1232,7 @@ label { display: grid; gap: 0.4rem; font-weight: 600; color: #334155; }
   .app-shell { grid-template-columns: 1fr; }
   .sidebar { position: static; }
   .content-grid.two-column { grid-template-columns: 1fr; }
+  .booking-filter-grid { grid-template-columns: 1fr; }
   .topbar { flex-direction: column; align-items: flex-start; }
   .topbar-right { width: 100%; justify-content: space-between; }
   .topbar-profile { max-width: 100%; }

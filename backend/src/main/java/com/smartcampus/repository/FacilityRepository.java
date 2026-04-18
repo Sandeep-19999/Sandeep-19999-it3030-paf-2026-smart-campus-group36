@@ -8,4 +8,5 @@ import java.util.List;
 public interface FacilityRepository extends JpaRepository<Facility, Long> {
     List<Facility> findByActiveTrueOrderByNameAsc();
     List<Facility> findAllByOrderByNameAsc();
+    Facility findFirstByNameIgnoreCaseAndTypeIgnoreCaseAndLocationIgnoreCase(String name, String type, String location);
 }

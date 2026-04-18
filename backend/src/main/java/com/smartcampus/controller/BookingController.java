@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -35,9 +36,15 @@ public class BookingController {
     }
 
     @GetMapping
-    public List<BookingResponse> getBookings(Authentication authentication) {
+    public List<BookingResponse> getBookings(
+            Authentication authentication,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) String facility,
+            @RequestParam(required = false) String user
+    ) {
         User currentUser = authService.getCurrentUser(authentication.getName());
-        return bookingService.getBookings(currentUser);
+        return bookingService.getBookings(currentUser, status, startDate, facility, user);
     }
 
     @GetMapping("/mine")
