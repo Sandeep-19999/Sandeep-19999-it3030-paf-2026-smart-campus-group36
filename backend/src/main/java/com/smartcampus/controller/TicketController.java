@@ -1,5 +1,6 @@
 package com.smartcampus.controller;
 
+import com.smartcampus.dto.ticket.AttachmentReviewRequest;
 import com.smartcampus.dto.ticket.TicketAssignmentRequest;
 import com.smartcampus.dto.ticket.TicketCommentRequest;
 import com.smartcampus.dto.ticket.TicketCreateRequest;
@@ -94,6 +95,17 @@ public class TicketController {
     ) {
         User currentUser = authService.getCurrentUser(authentication.getName());
         return ticketService.addAttachments(id, files, currentUser);
+    }
+
+    @PatchMapping("/{id}/attachments/{attachmentId}/review")
+    public TicketResponse reviewAttachment(
+            @PathVariable Long id,
+            @PathVariable Long attachmentId,
+            @Valid @RequestBody AttachmentReviewRequest request,
+            Authentication authentication
+    ) {
+        User currentUser = authService.getCurrentUser(authentication.getName());
+        return ticketService.reviewAttachment(id, attachmentId, request, currentUser);
     }
 
     @GetMapping("/attachments/{attachmentId}/download")

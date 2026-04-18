@@ -33,6 +33,16 @@ export const ticketService = {
     files.forEach((file) => formData.append('files', file));
     return apiRequest(`/api/tickets/${id}/attachments`, { method: 'POST', body: formData, token, isFormData: true });
   },
+  reviewAttachment(ticketId, attachmentId, payload, token) {
+    return apiRequest(`/api/tickets/${ticketId}/attachments/${attachmentId}/review`, { method: 'PATCH', body: payload, token });
+  },
+  async getAttachmentBlob(attachmentId, token) {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/tickets/attachments/${attachmentId}/download`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!response.ok) throw new Error('Attachment preview failed');
+    return response.blob();
+  },
   async downloadAttachment(attachmentId, token, filename) {
     const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/tickets/attachments/${attachmentId}/download`, {
       headers: { Authorization: `Bearer ${token}` }

@@ -6,6 +6,12 @@ import { ticketService } from '../services/ticketService';
 import { formatDate, getAllowedTicketTransitions } from '../utils/helpers';
 import StatusBadge from '../components/StatusBadge';
 
+function getAttachmentBadgeClass(status) {
+  if (status === 'APPROVED') return 'badge badge-approved';
+  if (status === 'REJECTED') return 'badge badge-rejected';
+  return 'badge badge-pending';
+}
+
 export default function TicketDetailsPage() {
   const { id } = useParams();
   const { token, user } = useAuth();
@@ -14,6 +20,8 @@ export default function TicketDetailsPage() {
   const [comment, setComment] = useState('');
   const [statusForm, setStatusForm] = useState({ status: 'IN_PROGRESS', resolutionNotes: '', rejectionReason: '' });
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [previewName, setPreviewName] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
@@ -48,7 +56,7 @@ export default function TicketDetailsPage() {
 
   const isAssignedTechnician = user?.role === 'TECHNICIAN' && user?.id === ticket.assignedTechnician?.id;
   const canManage = user?.role === 'ADMIN' || isAssignedTechnician;
-  const canUpload = (user?.role === 'ADMIN' || user?.id === ticket.creator?.id) && ticket.attachments.length < 3 && !['CLOSED', 'REJECTED'].includes(ticket.status);
+  const canUpload = user?.id === ticket.creator?.id && ticket.attachments.length < 3 && !['CLOSED', 'REJECTED'].includes(ticket.status);
 
   const handleAddComment = async (event) => {
     event.preventDefault();
@@ -135,6 +143,46 @@ export default function TicketDetailsPage() {
     }
   };
 
+  const handleAttachmentReview = async (attachment, status) => {
+    const adminMessage = window.prompt(`Enter message for the user (${status.toLowerCase()})`) || '';
+    if (!adminMessage.trim()) {
+      setError('Message is required when approving or rejecting a photo.');
+      return;
+    }
+    setError('');
+    setMessage('');
+    try {
+      await ticketService.reviewAttachment(ticket.id, attachment.id, { status, adminMessage: adminMessage.trim() }, token);
+      setMessage('Photo review saved and user notified.');
+      await load();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleAttachmentPreview = async (attachment) => {
+    setError('');
+    try {
+      const blob = await ticketService.getAttachmentBlob(attachment.id, token);
+      if (previewUrl) {
+        window.URL.revokeObjectURL(previewUrl);
+      }
+      const nextUrl = window.URL.createObjectURL(blob);
+      setPreviewUrl(nextUrl);
+      setPreviewName(attachment.originalFileName);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const closePreview = () => {
+    if (previewUrl) {
+      window.URL.revokeObjectURL(previewUrl);
+    }
+    setPreviewUrl('');
+    setPreviewName('');
+  };
+
   return (
     <div className="content-grid">
       <section className="panel">
@@ -204,17 +252,42 @@ export default function TicketDetailsPage() {
             <button className="secondary-btn">Upload Files</button>
           </form>
         ) : (
-          <p className="muted-text">Attachments can be uploaded only by the ticket creator or an admin while the ticket is still active.</p>
+          <p className="muted-text">Only the ticket creator can upload photos while the ticket is still active.</p>
         )}
         <div className="list-stack">
           {ticket.attachments.map((attachment) => (
-            <button key={attachment.id} className="file-link" onClick={() => ticketService.downloadAttachment(attachment.id, token, attachment.originalFileName)}>
-              {attachment.originalFileName}
-            </button>
+            <div key={attachment.id} className="attachment-card">
+              <div className="attachment-meta">
+                <strong>{attachment.originalFileName}</strong>
+                <span className={getAttachmentBadgeClass(attachment.reviewStatus)}>{attachment.reviewStatus}</span>
+                {attachment.reviewMessage ? <p className="muted-text">Admin message: {attachment.reviewMessage}</p> : null}
+                {attachment.reviewedBy ? <p className="muted-text">Reviewed by {attachment.reviewedBy.fullName} at {formatDate(attachment.reviewedAt)}</p> : null}
+              </div>
+              <div className="attachment-actions">
+                <button className="file-link" onClick={() => handleAttachmentPreview(attachment)}>View</button>
+                <button className="file-link" onClick={() => ticketService.downloadAttachment(attachment.id, token, attachment.originalFileName)}>Download</button>
+                {user?.role === 'ADMIN' ? (
+                  <>
+                    <button className="text-btn" onClick={() => handleAttachmentReview(attachment, 'APPROVED')}>Approve</button>
+                    <button className="text-btn danger-text" onClick={() => handleAttachmentReview(attachment, 'REJECTED')}>Reject</button>
+                  </>
+                ) : null}
+              </div>
+            </div>
           ))}
           {!ticket.attachments.length ? <p className="muted-text">No attachments yet.</p> : null}
         </div>
       </section>
+
+      {previewUrl ? (
+        <section className="panel">
+          <div className="panel-header">
+            <h3>Photo Preview - {previewName}</h3>
+            <button className="text-btn" onClick={closePreview}>Close</button>
+          </div>
+          <img src={previewUrl} alt={previewName} className="attachment-preview" />
+        </section>
+      ) : null}
 
       <section className="panel">
         <div className="panel-header"><h3>Comments</h3></div>

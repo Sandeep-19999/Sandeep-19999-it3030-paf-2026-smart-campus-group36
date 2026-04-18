@@ -1,6 +1,7 @@
 package com.smartcampus.service;
 
 import com.smartcampus.dto.ticket.AttachmentResponse;
+import com.smartcampus.dto.ticket.AttachmentReviewRequest;
 import com.smartcampus.dto.ticket.CommentResponse;
 import com.smartcampus.dto.ticket.TicketCreateRequest;
 import com.smartcampus.dto.ticket.TicketResponse;
@@ -10,6 +11,7 @@ import com.smartcampus.entity.Ticket;
 import com.smartcampus.entity.TicketAttachment;
 import com.smartcampus.entity.TicketComment;
 import com.smartcampus.entity.User;
+import com.smartcampus.enums.AttachmentReviewStatus;
 import com.smartcampus.enums.NotificationType;
 import com.smartcampus.enums.Role;
 import com.smartcampus.enums.TicketStatus;
@@ -24,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 
@@ -53,6 +56,10 @@ public class TicketService {
     }
 
     public TicketResponse createTicket(TicketCreateRequest request, User creator) {
+        if (creator.getRole() == Role.ADMIN) {
+            throw new ForbiddenOperationException("Admins cannot create incident tickets");
+        }
+
         Ticket ticket = new Ticket();
         ticket.setTitle(request.title().trim());
         ticket.setCategory(request.category().trim());
@@ -152,8 +159,11 @@ public class TicketService {
 
     public TicketResponse addAttachments(Long ticketId, List<MultipartFile> files, User currentUser) {
         Ticket ticket = requireTicketAccess(ticketId, currentUser);
-        if (!(ticket.getCreator().getId().equals(currentUser.getId()) || currentUser.getRole() == Role.ADMIN)) {
-            throw new ForbiddenOperationException("Only the ticket creator or admin can upload attachments");
+        if (!ticket.getCreator().getId().equals(currentUser.getId())) {
+            throw new ForbiddenOperationException("Only the ticket creator can upload attachments");
+        }
+        if (files == null || files.isEmpty()) {
+            throw new BadRequestException("Please attach at least one image file");
         }
         if (ticket.getStatus() == TicketStatus.CLOSED || ticket.getStatus() == TicketStatus.REJECTED) {
             throw new BadRequestException("Attachments cannot be added to a closed or rejected ticket");
@@ -167,6 +177,36 @@ public class TicketService {
         ticketAttachmentRepository.saveAll(attachments);
         Ticket saved = ticketRepository.save(ticket);
         return map(saved, currentUser);
+    }
+
+    public TicketResponse reviewAttachment(Long ticketId, Long attachmentId, AttachmentReviewRequest request, User currentUser) {
+        requireAdmin(currentUser);
+        if (request.status() == AttachmentReviewStatus.PENDING) {
+            throw new BadRequestException("Attachment review status must be APPROVED or REJECTED");
+        }
+
+        TicketAttachment attachment = ticketAttachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Attachment not found"));
+        if (!attachment.getTicket().getId().equals(ticketId)) {
+            throw new BadRequestException("Attachment does not belong to this ticket");
+        }
+
+        attachment.setReviewStatus(request.status());
+        attachment.setReviewMessage(request.adminMessage().trim());
+        attachment.setReviewedBy(currentUser);
+        attachment.setReviewedAt(LocalDateTime.now());
+        ticketAttachmentRepository.save(attachment);
+
+        Ticket ticket = attachment.getTicket();
+        String verdict = request.status() == AttachmentReviewStatus.APPROVED ? "approved" : "rejected";
+        notificationService.create(ticket.getCreator(),
+                "Ticket photo review update",
+                "Photo \"" + attachment.getOriginalFileName() + "\" for ticket #" + ticket.getId()
+                        + " was " + verdict + ". Admin message: " + request.adminMessage().trim(),
+                NotificationType.ATTACHMENT_REVIEWED,
+                String.valueOf(ticket.getId()));
+
+        return map(ticket, currentUser);
     }
 
     public TicketResponse addComment(Long ticketId, String content, User currentUser) {
@@ -330,7 +370,11 @@ public class TicketService {
                 attachment.getOriginalFileName(),
                 attachment.getContentType(),
                 attachment.getUploadedAt().toString(),
-                map(attachment.getUploadedBy())
+                map(attachment.getUploadedBy()),
+                attachment.getReviewStatus().name(),
+                attachment.getReviewMessage(),
+                attachment.getReviewedAt() == null ? null : attachment.getReviewedAt().toString(),
+                attachment.getReviewedBy() == null ? null : map(attachment.getReviewedBy())
         );
     }
 

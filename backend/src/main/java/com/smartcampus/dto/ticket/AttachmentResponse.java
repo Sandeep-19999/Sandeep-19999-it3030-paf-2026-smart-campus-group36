@@ -5,6 +5,10 @@ public record AttachmentResponse(
         String originalFileName,
         String contentType,
         String uploadedAt,
-        UserSummaryResponse uploadedBy
+        UserSummaryResponse uploadedBy,
+        String reviewStatus,
+        String reviewMessage,
+        String reviewedAt,
+        UserSummaryResponse reviewedBy
 ) {
 }

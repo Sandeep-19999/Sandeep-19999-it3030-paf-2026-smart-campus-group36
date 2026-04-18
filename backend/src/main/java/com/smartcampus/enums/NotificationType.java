@@ -4,6 +4,7 @@ public enum NotificationType {
     SYSTEM,
     TICKET_CREATED,
     TICKET_UPDATED,
+    ATTACHMENT_REVIEWED,
     COMMENT_ADDED,
     ASSIGNMENT,
     AUTH_EVENT,
