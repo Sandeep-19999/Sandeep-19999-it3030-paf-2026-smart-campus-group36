@@ -10,17 +10,22 @@ import com.smartcampus.entity.User;
 import com.smartcampus.enums.BookingStatus;
 import com.smartcampus.enums.NotificationType;
 import com.smartcampus.enums.Role;
+import com.smartcampus.enums.Status;
 import com.smartcampus.exception.BadRequestException;
 import com.smartcampus.exception.ForbiddenOperationException;
 import com.smartcampus.exception.ResourceNotFoundException;
 import com.smartcampus.repository.BookingRepository;
+import com.smartcampus.repository.FacilityRepository;
+import com.smartcampus.repository.ResourceRepository;
 import com.smartcampus.repository.UserRepository;
+import com.smartcampus.model.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Stream;
 
 @Service
 @Transactional
@@ -29,20 +34,26 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
     private final FacilityService facilityService;
+    private final FacilityRepository facilityRepository;
+    private final ResourceRepository resourceRepository;
     private final NotificationService notificationService;
 
     public BookingService(BookingRepository bookingRepository,
                           UserRepository userRepository,
                           FacilityService facilityService,
+                          FacilityRepository facilityRepository,
+                          ResourceRepository resourceRepository,
                           NotificationService notificationService) {
         this.bookingRepository = bookingRepository;
         this.userRepository = userRepository;
         this.facilityService = facilityService;
+        this.facilityRepository = facilityRepository;
+        this.resourceRepository = resourceRepository;
         this.notificationService = notificationService;
     }
 
     public BookingResponse createBooking(BookingCreateRequest request, User currentUser) {
-        Facility facility = facilityService.requireActiveFacility(request.facilityId());
+        Facility facility = resolveBookableFacility(request.facilityId());
         validateTimeRange(request.startTime(), request.endTime());
 
         boolean hasConflict = bookingRepository.existsOverlappingBookings(
@@ -78,9 +89,50 @@ public class BookingService {
         return map(saved);
     }
 
-    public List<BookingResponse> getBookings(User currentUser) {
+    public List<BookingResponse> getBookings(User currentUser,
+                                             String status,
+                                             java.time.LocalDate startDate,
+                                             String facilityFilter,
+                                             String userFilter) {
         if (currentUser.getRole() == Role.ADMIN) {
-            return bookingRepository.findAllByOrderByCreatedAtDesc().stream().map(this::map).toList();
+            Stream<Booking> stream = bookingRepository.findAllByOrderByCreatedAtDesc().stream();
+
+            if (hasText(status) && !"ALL".equalsIgnoreCase(status)) {
+                BookingStatus parsedStatus;
+                try {
+                    parsedStatus = BookingStatus.valueOf(status.trim().toUpperCase());
+                } catch (IllegalArgumentException ex) {
+                    throw new BadRequestException("Invalid booking status: " + status);
+                }
+                stream = stream.filter(booking -> booking.getStatus() == parsedStatus);
+            }
+
+            if (startDate != null) {
+                stream = stream.filter(booking -> {
+                    var bookingDate = booking.getStartTime().toLocalDate();
+                    return !bookingDate.isBefore(startDate);
+                });
+            }
+
+            if (hasText(facilityFilter)) {
+                String normalizedFacility = facilityFilter.trim().toLowerCase();
+                stream = stream.filter(booking -> booking.getFacility() != null
+                        && booking.getFacility().getName() != null
+                        && booking.getFacility().getName().toLowerCase().contains(normalizedFacility));
+            }
+
+            if (hasText(userFilter)) {
+                String normalizedUser = userFilter.trim().toLowerCase();
+                stream = stream.filter(booking -> {
+                    User requester = booking.getRequester();
+                    return requester != null && (
+                            containsIgnoreCase(requester.getFullName(), normalizedUser)
+                                    || containsIgnoreCase(requester.getEmail(), normalizedUser)
+                    );
+                });
+            }
+
+            return stream.map(this::map).toList();
         }
         return bookingRepository.findByRequesterOrderByCreatedAtDesc(currentUser).stream().map(this::map).toList();
     }
@@ -182,6 +234,44 @@ public class BookingService {
         return new UserSummaryResponse(user.getId(), user.getFullName(), user.getEmail(), user.getRole().name());
     }
 
+    private Facility resolveBookableFacility(Long selectedId) {
+        Facility facility = facilityRepository.findById(selectedId).orElse(null);
+        if (facility != null) {
+            if (!facility.isActive()) {
+                throw new ForbiddenOperationException("This facility is currently unavailable for booking");
+            }
+            return facility;
+        }
+
+        Resource resource = resourceRepository.findById(selectedId)
+                .orElseThrow(() -> new ResourceNotFoundException("Facility not found"));
+
+        if (resource.getStatus() != Status.ACTIVE) {
+            throw new ForbiddenOperationException("This facility is currently unavailable for booking");
+        }
+
+        Facility existing = facilityRepository.findFirstByNameIgnoreCaseAndTypeIgnoreCaseAndLocationIgnoreCase(
+                resource.getName(),
+                resource.getType(),
+                resource.getLocation()
+        );
+        if (existing != null) {
+            if (!existing.isActive()) {
+                throw new ForbiddenOperationException("This facility is currently unavailable for booking");
+            }
+            return existing;
+        }
+
+        Facility generated = new Facility();
+        generated.setName(resource.getName());
+        generated.setType(resource.getType());
+        generated.setLocation(resource.getLocation());
+        generated.setCapacity(resource.getCapacity());
+        generated.setDescription("Auto-created from active resource catalogue");
+        generated.setActive(true);
+        return facilityRepository.save(generated);
+    }
+
     private void validateTimeRange(LocalDateTime startTime, LocalDateTime endTime) {
         if (!endTime.isAfter(startTime)) {
             throw new BadRequestException("Booking end time must be after start time");
@@ -192,5 +282,13 @@ public class BookingService {
         if (currentUser.getRole() != Role.ADMIN) {
             throw new ForbiddenOperationException("Only admins can perform this action");
         }
+    }
+
+    private boolean containsIgnoreCase(String value, String search) {
+        return value != null && value.toLowerCase().contains(search);
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
     }
 }

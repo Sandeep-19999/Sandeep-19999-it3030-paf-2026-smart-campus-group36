@@ -1,11 +1,22 @@
 import { apiRequest } from './api';
 
+function buildQuery(params = {}) {
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '' && value !== 'ALL') {
+      search.set(key, value);
+    }
+  });
+  const query = search.toString();
+  return query ? `?${query}` : '';
+}
+
 export const bookingService = {
   getFacilities(token) {
     return apiRequest('/api/facilities', { token });
   },
-  getBookings(token) {
-    return apiRequest('/api/bookings', { token });
+  getBookings(filters = {}, token) {
+    return apiRequest(`/api/bookings${buildQuery(filters)}`, { token });
   },
   getMyBookings(token) {
     return apiRequest('/api/bookings/mine', { token });

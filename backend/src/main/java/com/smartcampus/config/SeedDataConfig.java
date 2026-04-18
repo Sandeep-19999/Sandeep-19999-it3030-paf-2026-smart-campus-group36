@@ -10,11 +10,14 @@ import com.smartcampus.enums.AuthProvider;
 import com.smartcampus.enums.BookingStatus;
 import com.smartcampus.enums.NotificationType;
 import com.smartcampus.enums.Role;
+import com.smartcampus.enums.Status;
 import com.smartcampus.enums.TicketPriority;
 import com.smartcampus.enums.TicketStatus;
+import com.smartcampus.model.Resource;
 import com.smartcampus.repository.BookingRepository;
 import com.smartcampus.repository.FacilityRepository;
 import com.smartcampus.repository.NotificationRepository;
+import com.smartcampus.repository.ResourceRepository;
 import com.smartcampus.repository.TicketCommentRepository;
 import com.smartcampus.repository.TicketRepository;
 import com.smartcampus.repository.UserRepository;
@@ -24,6 +27,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Configuration
 public class SeedDataConfig {
@@ -31,12 +35,45 @@ public class SeedDataConfig {
     @Bean
     CommandLineRunner seedData(UserRepository userRepository,
                                FacilityRepository facilityRepository,
+                               ResourceRepository resourceRepository,
                                BookingRepository bookingRepository,
                                TicketRepository ticketRepository,
                                TicketCommentRepository ticketCommentRepository,
                                NotificationRepository notificationRepository,
                                PasswordEncoder passwordEncoder) {
         return args -> {
+            if (resourceRepository.count() == 0) {
+                Resource projector = new Resource();
+                projector.setName("Ceiling Projector");
+                projector.setType("Projector");
+                projector.setCapacity(80);
+                projector.setLocation("Conference Room A");
+                projector.setStatus(Status.ACTIVE);
+                projector.setAvailabilityStart(LocalTime.of(8, 0));
+                projector.setAvailabilityEnd(LocalTime.of(18, 0));
+                resourceRepository.save(projector);
+
+                Resource lab = new Resource();
+                lab.setName("Computer Lab 03");
+                lab.setType("Lab");
+                lab.setCapacity(45);
+                lab.setLocation("Engineering Block - Floor 1");
+                lab.setStatus(Status.ACTIVE);
+                lab.setAvailabilityStart(LocalTime.of(8, 0));
+                lab.setAvailabilityEnd(LocalTime.of(18, 0));
+                resourceRepository.save(lab);
+
+                Resource meetingRoom = new Resource();
+                meetingRoom.setName("Conference Room A");
+                meetingRoom.setType("Meeting Room");
+                meetingRoom.setCapacity(20);
+                meetingRoom.setLocation("Administration Block - Level 2");
+                meetingRoom.setStatus(Status.ACTIVE);
+                meetingRoom.setAvailabilityStart(LocalTime.of(9, 0));
+                meetingRoom.setAvailabilityEnd(LocalTime.of(17, 0));
+                resourceRepository.save(meetingRoom);
+            }
+
             if (userRepository.count() > 0) {
                 return;
             }
