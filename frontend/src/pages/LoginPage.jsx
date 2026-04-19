@@ -6,31 +6,43 @@ import { authService } from '../services/authService';
 export default function LoginPage() {
   const { devLogin, isAuthenticated, loading, user } = useAuth();
   const navigate = useNavigate();
+
   const [form, setForm] = useState({
     email: '',
     password: ''
   });
+
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [oauthInfo, setOauthInfo] = useState({ googleLoginUrl: '', note: '' });
+  const [oauthInfo, setOauthInfo] = useState({ googleLoginUrl: '' });
   const [loadingOAuthInfo, setLoadingOAuthInfo] = useState(true);
 
   useEffect(() => {
     if (!loading && isAuthenticated) {
-      navigate(user?.role === 'ADMIN' ? '/app/admin' : '/app/dashboard', { replace: true });
+      navigate(user?.role === 'ADMIN' ? '/app/admin' : '/app/dashboard', {
+        replace: true
+      });
     }
   }, [loading, isAuthenticated, user, navigate]);
 
   useEffect(() => {
     let active = true;
+
     const fetchOauthInfo = async () => {
       try {
         const data = await authService.oauthInfo();
+
         if (!active) return;
-        setOauthInfo(data);
+
+        setOauthInfo({
+          googleLoginUrl: data.googleLoginUrl || ''
+        });
       } catch {
         if (!active) return;
-        setOauthInfo({ note: 'Google sign-in currently unavailable.' });
+
+        setOauthInfo({
+          googleLoginUrl: ''
+        });
       } finally {
         if (!active) return;
         setLoadingOAuthInfo(false);
@@ -38,6 +50,7 @@ export default function LoginPage() {
     };
 
     fetchOauthInfo();
+
     return () => {
       active = false;
     };
@@ -50,13 +63,18 @@ export default function LoginPage() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+
     setSubmitting(true);
     setError('');
+
     try {
       const currentUser = await devLogin(form);
-      navigate('/');
+
+      navigate(currentUser?.role === 'ADMIN' ? '/app/admin' : '/app/dashboard', {
+        replace: true
+      });
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Login failed. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -75,29 +93,45 @@ export default function LoginPage() {
               type="email"
               placeholder="you@uni.edu"
               value={form.email}
-              onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  email: e.target.value
+                }))
+              }
               required
             />
           </label>
+
           <label>
             Password
             <input
               type="password"
               placeholder="........"
               value={form.password}
-              onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  password: e.target.value
+                }))
+              }
               required
             />
           </label>
 
           {error ? <div className="error-box">{error}</div> : null}
 
-          <button type="submit" className="primary-btn auth-submit" disabled={submitting}>
+          <button
+            type="submit"
+            className="primary-btn auth-submit"
+            disabled={submitting}
+          >
             {submitting ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
 
         <div className="separator">or continue with</div>
+
         <button
           type="button"
           className="secondary-btn oauth-btn"
@@ -106,12 +140,17 @@ export default function LoginPage() {
         >
           {loadingOAuthInfo ? 'Loading Google login…' : 'Continue with Google'}
         </button>
-        {oauthInfo.note ? <p className="muted-text oauth-note">{oauthInfo.note}</p> : null}
 
         <p className="muted-text auth-meta-text">
-          No account? <Link to="/auth/register" className="text-btn">Register</Link>
+          No account?{' '}
+          <Link to="/auth/register" className="text-btn">
+            Register
+          </Link>
         </p>
-        <Link to="/" className="text-btn auth-back-link">Back to landing</Link>
+
+        <Link to="/" className="text-btn auth-back-link">
+          Back to landing
+        </Link>
       </div>
     </div>
   );
