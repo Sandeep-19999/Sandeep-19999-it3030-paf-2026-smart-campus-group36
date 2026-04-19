@@ -10,6 +10,9 @@ export const authService = {
   me(token) {
     return apiRequest('/api/auth/me', { token });
   },
+  oauthInfo() {
+    return apiRequest('/api/auth/oauth-info');
+  },
   getTechnicians(token) {
     return apiRequest('/api/auth/technicians', { token });
   },
