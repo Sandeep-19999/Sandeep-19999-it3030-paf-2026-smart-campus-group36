@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { authService } from '../services/authService';
 
 export default function LoginPage() {
   const { devLogin, isAuthenticated, loading, user } = useAuth();
@@ -11,12 +12,41 @@ export default function LoginPage() {
   });
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [oauthInfo, setOauthInfo] = useState({ googleLoginUrl: '', note: '' });
+  const [loadingOAuthInfo, setLoadingOAuthInfo] = useState(true);
 
   useEffect(() => {
     if (!loading && isAuthenticated) {
       navigate(user?.role === 'ADMIN' ? '/app/admin' : '/app/dashboard', { replace: true });
     }
   }, [loading, isAuthenticated, user, navigate]);
+
+  useEffect(() => {
+    let active = true;
+    const fetchOauthInfo = async () => {
+      try {
+        const data = await authService.oauthInfo();
+        if (!active) return;
+        setOauthInfo(data);
+      } catch {
+        if (!active) return;
+        setOauthInfo({ note: 'Google sign-in currently unavailable.' });
+      } finally {
+        if (!active) return;
+        setLoadingOAuthInfo(false);
+      }
+    };
+
+    fetchOauthInfo();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleGoogleLogin = () => {
+    const url = oauthInfo.googleLoginUrl || '/oauth2/authorization/google';
+    window.location.href = url;
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -66,6 +96,17 @@ export default function LoginPage() {
             {submitting ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
+
+        <div className="separator">or continue with</div>
+        <button
+          type="button"
+          className="secondary-btn oauth-btn"
+          onClick={handleGoogleLogin}
+          disabled={loadingOAuthInfo}
+        >
+          {loadingOAuthInfo ? 'Loading Google login…' : 'Continue with Google'}
+        </button>
+        {oauthInfo.note ? <p className="muted-text oauth-note">{oauthInfo.note}</p> : null}
 
         <p className="muted-text auth-meta-text">
           No account? <Link to="/auth/register" className="text-btn">Register</Link>
