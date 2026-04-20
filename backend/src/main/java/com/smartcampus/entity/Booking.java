@@ -38,6 +38,12 @@ public class Booking {
     @Column(nullable = false)
     private BookingStatus status = BookingStatus.PENDING;
 
+    @Column(unique = true, length = 120)
+    private String qrCodeToken;
+
+    @Column
+    private LocalDateTime checkedInAt;
+
     @Column(length = 1200)
     private String decisionReason;
 
