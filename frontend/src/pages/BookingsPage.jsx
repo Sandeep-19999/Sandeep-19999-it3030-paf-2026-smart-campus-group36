@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import BookingFiltersPanel from '../components/BookingFiltersPanel';
+import BookingQrModal from '../components/BookingQrModal';
 import StatusBadge from '../components/StatusBadge';
 import { bookingService } from '../services/bookingService';
 import { resourceService } from '../services/resourceService';
@@ -87,6 +88,11 @@ export default function BookingsPage() {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(true);
   const [resourceLoading, setResourceLoading] = useState(false);
+  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [qrModalLoading, setQrModalLoading] = useState(false);
+  const [qrCodeToken, setQrCodeToken] = useState('');
+  const [qrImageBase64, setQrImageBase64] = useState('');
+  const [qrBookingId, setQrBookingId] = useState(null);
 
   const sortedActiveResources = useMemo(
     () => [...activeResources].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })),
@@ -303,6 +309,35 @@ export default function BookingsPage() {
     }
   };
 
+  const viewQrCode = async (bookingId) => {
+    setError('');
+    setSuccess('');
+    setQrModalOpen(true);
+    setQrModalLoading(true);
+    setQrCodeToken('');
+    setQrImageBase64('');
+    setQrBookingId(bookingId);
+
+    try {
+      const response = await bookingService.getBookingQr(bookingId, token);
+      setQrCodeToken(response.qrCodeToken || '');
+      setQrImageBase64(response.qrCodeImageBase64 || '');
+    } catch (err) {
+      setQrModalOpen(false);
+      setError(err.message);
+    } finally {
+      setQrModalLoading(false);
+    }
+  };
+
+  const closeQrModal = () => {
+    setQrModalOpen(false);
+    setQrCodeToken('');
+    setQrImageBase64('');
+    setQrBookingId(null);
+    setQrModalLoading(false);
+  };
+
   return (
     <div className="content-grid two-column">
       {error ? <div className="error-box">{error}</div> : null}
@@ -397,6 +432,11 @@ export default function BookingsPage() {
                     Cancel
                   </button>
                 ) : null}
+                {booking.status === 'APPROVED' ? (
+                  <button type="button" className="text-btn" onClick={() => viewQrCode(booking.id)}>
+                    View QR
+                  </button>
+                ) : null}
                 {isAdmin && booking.status === 'PENDING' ? (
                   <>
                     <button className="text-btn" onClick={() => decideBooking(booking.id, 'APPROVED')}>Approve</button>
@@ -409,6 +449,15 @@ export default function BookingsPage() {
           {!bookings.length && !loading ? <p className="muted-text">No bookings found</p> : null}
         </div>
       </section>
+
+      <BookingQrModal
+        open={qrModalOpen}
+        loading={qrModalLoading}
+        bookingId={qrBookingId}
+        qrCodeToken={qrCodeToken}
+        qrCodeImageBase64={qrImageBase64}
+        onClose={closeQrModal}
+      />
     </div>
   );
 }

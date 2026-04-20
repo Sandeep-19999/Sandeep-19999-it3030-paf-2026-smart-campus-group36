@@ -11,10 +11,12 @@ import org.springframework.data.repository.query.Param;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 public interface BookingRepository extends JpaRepository<Booking, Long> {
     List<Booking> findByRequesterOrderByCreatedAtDesc(User requester);
     List<Booking> findAllByOrderByCreatedAtDesc();
+        Optional<Booking> findByQrCodeToken(String qrCodeToken);
 
     @Query("""
             select case when count(b) > 0 then true else false end

@@ -1,8 +1,10 @@
 package com.smartcampus.controller;
 
 import com.smartcampus.dto.booking.BookingCancelRequest;
+import com.smartcampus.dto.booking.BookingCheckInRequest;
 import com.smartcampus.dto.booking.BookingCreateRequest;
 import com.smartcampus.dto.booking.BookingDecisionRequest;
+import com.smartcampus.dto.booking.BookingQrResponse;
 import com.smartcampus.dto.booking.BookingResponse;
 import com.smartcampus.entity.User;
 import com.smartcampus.service.AuthService;
@@ -72,5 +74,23 @@ public class BookingController {
         User currentUser = authService.getCurrentUser(authentication.getName());
         String reason = request == null ? null : request.reason();
         return bookingService.cancelBooking(id, reason, currentUser);
+    }
+
+    @GetMapping("/{id}/qr")
+    public BookingQrResponse getQrCode(
+            @PathVariable Long id,
+            Authentication authentication
+    ) {
+        User currentUser = authService.getCurrentUser(authentication.getName());
+        return bookingService.generateQrCode(id, currentUser);
+    }
+
+    @PostMapping("/check-in")
+    public BookingResponse checkIn(
+            @Valid @RequestBody BookingCheckInRequest request,
+            Authentication authentication
+    ) {
+        User currentUser = authService.getCurrentUser(authentication.getName());
+        return bookingService.checkInBooking(request.qrCodeToken(), currentUser);
     }
 }

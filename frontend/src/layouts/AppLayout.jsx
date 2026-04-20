@@ -89,6 +89,7 @@ export default function AppLayout() {
           <NavLink to="/app/dashboard">Dashboard</NavLink>
           {user?.role === 'ADMIN' ? <NavLink to="/app/admin">Admin</NavLink> : null}
           <NavLink to="/app/bookings">Bookings</NavLink>
+          {user?.role !== 'ADMIN' ? <NavLink to="/app/check-in">Check-In</NavLink> : null}
           <NavLink to="/app/resources">Resources</NavLink>
           <NavLink to="/app/tickets">Tickets</NavLink>
           <NavLink to="/app/notifications">Notifications</NavLink>

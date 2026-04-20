@@ -2,6 +2,7 @@ package com.smartcampus.service;
 
 import com.smartcampus.dto.booking.BookingCreateRequest;
 import com.smartcampus.dto.booking.BookingDecisionRequest;
+import com.smartcampus.dto.booking.BookingQrResponse;
 import com.smartcampus.dto.booking.BookingResponse;
 import com.smartcampus.dto.ticket.UserSummaryResponse;
 import com.smartcampus.entity.Booking;
@@ -25,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 @Service
@@ -37,19 +39,22 @@ public class BookingService {
     private final FacilityRepository facilityRepository;
     private final ResourceRepository resourceRepository;
     private final NotificationService notificationService;
+    private final QrCodeService qrCodeService;
 
     public BookingService(BookingRepository bookingRepository,
                           UserRepository userRepository,
                           FacilityService facilityService,
                           FacilityRepository facilityRepository,
                           ResourceRepository resourceRepository,
-                          NotificationService notificationService) {
+                          NotificationService notificationService,
+                          QrCodeService qrCodeService) {
         this.bookingRepository = bookingRepository;
         this.userRepository = userRepository;
         this.facilityService = facilityService;
         this.facilityRepository = facilityRepository;
         this.resourceRepository = resourceRepository;
         this.notificationService = notificationService;
+        this.qrCodeService = qrCodeService;
     }
 
     public BookingResponse createBooking(BookingCreateRequest request, User currentUser) {
@@ -73,6 +78,8 @@ public class BookingService {
         booking.setStartTime(request.startTime());
         booking.setEndTime(request.endTime());
         booking.setStatus(BookingStatus.PENDING);
+        booking.setQrCodeToken(null);
+        booking.setCheckedInAt(null);
 
         Booking saved = bookingRepository.save(booking);
 
@@ -170,6 +177,13 @@ public class BookingService {
         }
 
         booking.setStatus(request.status());
+        if (request.status() == BookingStatus.APPROVED) {
+            booking.setQrCodeToken(generateQrCodeToken());
+            booking.setCheckedInAt(null);
+        } else {
+            booking.setQrCodeToken(null);
+            booking.setCheckedInAt(null);
+        }
         booking.setDecisionReason(request.reason());
         Booking saved = bookingRepository.save(booking);
 
@@ -177,6 +191,59 @@ public class BookingService {
                 booking.getRequester(),
                 "Booking status updated",
                 "Your booking #" + booking.getId() + " is " + booking.getStatus().name(),
+                NotificationType.BOOKING_UPDATED,
+                String.valueOf(booking.getId())
+        );
+
+        return map(saved);
+    }
+
+    public BookingQrResponse generateQrCode(Long id, User currentUser) {
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+
+        requireOwnerOrAdmin(booking, currentUser);
+
+        if (booking.getStatus() != BookingStatus.APPROVED) {
+            throw new BadRequestException("QR is only available for approved bookings");
+        }
+
+        if (!hasText(booking.getQrCodeToken())) {
+            booking.setQrCodeToken(generateQrCodeToken());
+            bookingRepository.save(booking);
+        }
+
+        String imageBase64 = qrCodeService.toBase64Png(booking.getQrCodeToken());
+        return new BookingQrResponse(booking.getId(), booking.getQrCodeToken(), imageBase64);
+    }
+
+    public BookingResponse checkInBooking(String qrCodeToken, User currentUser) {
+        if (!hasText(qrCodeToken)) {
+            throw new BadRequestException("QR code is required");
+        }
+
+        Booking booking = bookingRepository.findByQrCodeToken(qrCodeToken.trim())
+                .orElseThrow(() -> new ResourceNotFoundException("Invalid QR code"));
+
+        requireOwnerOrAdmin(booking, currentUser);
+
+        if (booking.getStatus() == BookingStatus.CHECKED_IN) {
+            throw new BadRequestException("Booking is already checked in");
+        }
+        if (booking.getStatus() != BookingStatus.APPROVED) {
+            throw new BadRequestException("Only approved bookings can be checked in");
+        }
+
+        validateCheckInTimeWindow(booking);
+
+        booking.setStatus(BookingStatus.CHECKED_IN);
+        booking.setCheckedInAt(LocalDateTime.now());
+        Booking saved = bookingRepository.save(booking);
+
+        notificationService.create(
+                booking.getRequester(),
+                "Booking checked in",
+                "Booking #" + booking.getId() + " has been checked in",
                 NotificationType.BOOKING_UPDATED,
                 String.valueOf(booking.getId())
         );
@@ -282,6 +349,26 @@ public class BookingService {
         if (currentUser.getRole() != Role.ADMIN) {
             throw new ForbiddenOperationException("Only admins can perform this action");
         }
+    }
+
+    private void requireOwnerOrAdmin(Booking booking, User currentUser) {
+        boolean isOwner = booking.getRequester().getId().equals(currentUser.getId());
+        if (!isOwner && currentUser.getRole() != Role.ADMIN) {
+            throw new ForbiddenOperationException("Only the booking owner or admin can perform this action");
+        }
+    }
+
+    private void validateCheckInTimeWindow(Booking booking) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime allowedFrom = booking.getStartTime().minusMinutes(15);
+        LocalDateTime allowedUntil = booking.getEndTime().plusMinutes(15);
+        if (now.isBefore(allowedFrom) || now.isAfter(allowedUntil)) {
+            throw new BadRequestException("Check-in is allowed only within booking time and 15 minutes grace period");
+        }
+    }
+
+    private String generateQrCodeToken() {
+        return UUID.randomUUID().toString();
     }
 
     private boolean containsIgnoreCase(String value, String search) {

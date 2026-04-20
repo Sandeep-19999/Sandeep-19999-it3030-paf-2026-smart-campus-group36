@@ -33,5 +33,15 @@ export const bookingService = {
       body: reason ? { reason } : {},
       token
     });
+  },
+  getBookingQr(id, token) {
+    return apiRequest(`/api/bookings/${id}/qr`, { token });
+  },
+  checkIn(qrCodeToken, token) {
+    return apiRequest('/api/bookings/check-in', {
+      method: 'POST',
+      body: { qrCodeToken },
+      token
+    });
   }
 };
