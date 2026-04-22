@@ -5,6 +5,7 @@ import DashboardPage from './pages/DashboardPage';
 import FacilitiesPage from './pages/FacilitiesPage';
 import HomePage from './pages/HomePage';
 import BookingsPage from './pages/BookingsPage';
+import CheckInPage from './pages/CheckInPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import NotificationsPage from './pages/NotificationsPage';
@@ -66,6 +67,14 @@ export default function App() {
           }
         />
         <Route path="bookings" element={<BookingsPage />} />
+        <Route
+          path="check-in"
+          element={
+            <ProtectedRoute roles={['USER', 'TECHNICIAN']}>
+              <CheckInPage />
+            </ProtectedRoute>
+          }
+        />
         <Route path="resources" element={<ResourcesPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="tickets" element={<TicketsPage />} />
