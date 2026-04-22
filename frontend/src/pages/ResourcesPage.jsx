@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { resourceService } from '../services/resourceService';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -12,30 +12,59 @@ const emptyForm = {
   availabilityEnd: '17:00'
 };
 
-const emptyFilters = {
-  type: '',
-  minCapacity: '',
-  location: '',
-  status: ''
-};
-
 export default function ResourcesPage() {
   const { token, user } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
 
   const [resources, setResources] = useState([]);
-  const [filters, setFilters] = useState(emptyFilters);
+  const [availabilityStartFilter, setAvailabilityStartFilter] = useState('08:00');
+  const [availabilityEndFilter, setAvailabilityEndFilter] = useState('17:00');
+  const [facilitySearch, setFacilitySearch] = useState('');
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  async function loadResources(activeFilters = {}) {
+  const toMinutes = (time) => {
+    const [hour, minute] = String(time || '00:00').split(':').map(Number);
+    return hour * 60 + minute;
+  };
+
+  const filteredResources = useMemo(() => {
+    const hasStartFilter = Boolean(availabilityStartFilter);
+    const hasEndFilter = Boolean(availabilityEndFilter);
+    const hasSearch = Boolean(facilitySearch.trim());
+
+    if (!hasStartFilter && !hasEndFilter && !hasSearch) {
+      return resources;
+    }
+
+    const selectedStartMinutes = hasStartFilter ? toMinutes(availabilityStartFilter) : null;
+    const selectedEndMinutes = hasEndFilter ? toMinutes(availabilityEndFilter) : null;
+    const searchValue = facilitySearch.trim().toLowerCase();
+
+    return resources.filter((resource) => {
+      const resourceStart = toMinutes(resource.availabilityStart);
+      const resourceEnd = toMinutes(resource.availabilityEnd);
+
+      const matchesSearch = !hasSearch
+        || resource.name.toLowerCase().includes(searchValue)
+        || resource.type.toLowerCase().includes(searchValue);
+
+      const matchesTimeWindow = (!hasStartFilter || selectedStartMinutes >= resourceStart)
+        && (!hasEndFilter || selectedEndMinutes <= resourceEnd)
+        && (!hasStartFilter || !hasEndFilter || selectedStartMinutes <= selectedEndMinutes);
+
+      return resource.status === 'ACTIVE' && matchesSearch && matchesTimeWindow;
+    });
+  }, [resources, availabilityStartFilter, availabilityEndFilter, facilitySearch]);
+
+  async function loadResources() {
     setLoading(true);
     setError('');
     try {
-      const data = await resourceService.getResources(activeFilters, token);
+      const data = await resourceService.getResources({}, token);
       setResources(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.message);
@@ -49,21 +78,6 @@ export default function ResourcesPage() {
       loadResources().catch(console.error);
     }
   }, [token]);
-
-  const onFilterChange = (event) => {
-    const { name, value } = event.target;
-    setFilters((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const applyFilters = async (event) => {
-    event.preventDefault();
-    await loadResources(filters);
-  };
-
-  const resetFilters = async () => {
-    setFilters(emptyFilters);
-    await loadResources({});
-  };
 
   const onFormChange = (event) => {
     const { name, value } = event.target;
@@ -131,129 +145,119 @@ export default function ResourcesPage() {
 
   return (
     <div className="content-grid two-column">
-      <section className="panel">
-        <div className="panel-header">
-          <h3>Resource Filters</h3>
-        </div>
-        <form className="form-grid" onSubmit={applyFilters}>
-          <label>
-            Type
-            <input
-              name="type"
-              value={filters.type}
-              onChange={onFilterChange}
-              placeholder="Lab, Lecture Hall, Projector"
-            />
-          </label>
-          <label>
-            Min Capacity
-            <input
-              name="minCapacity"
-              type="number"
-              min="0"
-              value={filters.minCapacity}
-              onChange={onFilterChange}
-              placeholder="40"
-            />
-          </label>
-          <label>
-            Location
-            <input
-              name="location"
-              value={filters.location}
-              onChange={onFilterChange}
-              placeholder="Building A"
-            />
-          </label>
-          <label>
-            Status
-            <select name="status" value={filters.status} onChange={onFilterChange}>
-              <option value="">ALL</option>
-              <option value="ACTIVE">ACTIVE</option>
-              <option value="OUT_OF_SERVICE">OUT_OF_SERVICE</option>
-            </select>
-          </label>
-          <button className="primary-btn" type="submit">Apply Filters</button>
-          <button className="secondary-btn" type="button" onClick={resetFilters}>Reset Filters</button>
-        </form>
-
-        {isAdmin ? (
-          <>
-            <div className="panel-header resource-form-header">
-              <h3>{editingId ? 'Update Resource' : 'Add New Resource'}</h3>
-              {editingId ? (
-                <button type="button" className="text-btn" onClick={resetForm}>
-                  Cancel Edit
-                </button>
-              ) : null}
-            </div>
-
-            <form className="form-grid" onSubmit={handleSubmit}>
-              <label>
-                Name
-                <input name="name" value={form.name} onChange={onFormChange} required />
-              </label>
-              <label>
-                Type
-                <input name="type" value={form.type} onChange={onFormChange} required />
-              </label>
-              <label>
-                Capacity
-                <input
-                  name="capacity"
-                  type="number"
-                  min="1"
-                  value={form.capacity}
-                  onChange={onFormChange}
-                  required
-                />
-              </label>
-              <label>
-                Location
-                <input name="location" value={form.location} onChange={onFormChange} required />
-              </label>
-              <label>
-                Status
-                <select name="status" value={form.status} onChange={onFormChange}>
-                  <option value="ACTIVE">ACTIVE</option>
-                  <option value="OUT_OF_SERVICE">OUT_OF_SERVICE</option>
-                </select>
-              </label>
-              <label>
-                Availability Start
-                <input
-                  name="availabilityStart"
-                  type="time"
-                  value={form.availabilityStart}
-                  onChange={onFormChange}
-                  required
-                />
-              </label>
-              <label>
-                Availability End
-                <input
-                  name="availabilityEnd"
-                  type="time"
-                  value={form.availabilityEnd}
-                  onChange={onFormChange}
-                  required
-                />
-              </label>
-
-              <button className="primary-btn" disabled={saving}>
-                {saving ? 'Saving...' : editingId ? 'Update Resource' : 'Create Resource'}
+      {isAdmin ? (
+        <section className="panel">
+          <div className="panel-header resource-form-header">
+            <h3>{editingId ? 'Update Resource' : 'Add New Resource'}</h3>
+            {editingId ? (
+              <button type="button" className="text-btn" onClick={resetForm}>
+                Cancel Edit
               </button>
-            </form>
-          </>
-        ) : (
-          <p className="muted-text">Read-only mode. Login as ADMIN to add, update, or delete resources.</p>
-        )}
-      </section>
+            ) : null}
+          </div>
+
+          <form className="form-grid" onSubmit={handleSubmit}>
+            <label>
+              Name
+              <input name="name" value={form.name} onChange={onFormChange} required />
+            </label>
+            <label>
+              Type
+              <input name="type" value={form.type} onChange={onFormChange} required />
+            </label>
+            <label>
+              Capacity
+              <input
+                name="capacity"
+                type="number"
+                min="1"
+                value={form.capacity}
+                onChange={onFormChange}
+                required
+              />
+            </label>
+            <label>
+              Location
+              <input name="location" value={form.location} onChange={onFormChange} required />
+            </label>
+            <label>
+              Status
+              <select name="status" value={form.status} onChange={onFormChange}>
+                <option value="ACTIVE">ACTIVE</option>
+                <option value="OUT_OF_SERVICE">OUT_OF_SERVICE</option>
+              </select>
+            </label>
+            <label>
+              Availability Start
+              <input
+                name="availabilityStart"
+                type="time"
+                value={form.availabilityStart}
+                onChange={onFormChange}
+                required
+              />
+            </label>
+            <label>
+              Availability End
+              <input
+                name="availabilityEnd"
+                type="time"
+                value={form.availabilityEnd}
+                onChange={onFormChange}
+                required
+              />
+            </label>
+
+            <button className="primary-btn" disabled={saving}>
+              {saving ? 'Saving...' : editingId ? 'Update Resource' : 'Create Resource'}
+            </button>
+          </form>
+        </section>
+      ) : null}
 
       <section className="panel">
         <div className="panel-header">
           <h3>Resources Catalogue</h3>
-          <span className="muted-text">{resources.length} items</span>
+          <span className="muted-text">{filteredResources.length} of {resources.length} items</span>
+        </div>
+
+        <div className="facility-tools-row">
+          <label>
+            Availability Start
+            <input
+              type="time"
+              value={availabilityStartFilter}
+              onChange={(event) => setAvailabilityStartFilter(event.target.value)}
+            />
+          </label>
+          <label>
+            Availability End
+            <input
+              type="time"
+              value={availabilityEndFilter}
+              onChange={(event) => setAvailabilityEndFilter(event.target.value)}
+            />
+          </label>
+          <label>
+            Search Facility (Name or Type)
+            <input
+              type="text"
+              placeholder="e.g., Physics Lab or Classroom"
+              value={facilitySearch}
+              onChange={(event) => setFacilitySearch(event.target.value)}
+            />
+          </label>
+          <button
+            type="button"
+            className="secondary-btn"
+            onClick={() => {
+              setAvailabilityStartFilter('08:00');
+              setAvailabilityEndFilter('17:00');
+              setFacilitySearch('');
+            }}
+          >
+            Clear Filters
+          </button>
         </div>
 
         {error ? <div className="error-box">{error}</div> : null}
@@ -262,7 +266,7 @@ export default function ResourcesPage() {
           <p className="muted-text">Loading resources...</p>
         ) : (
           <div className="list-stack">
-            {resources.map((resource) => (
+            {filteredResources.map((resource) => (
               <div key={resource.id} className="resource-row">
                 <div>
                   <strong>{resource.name}</strong>
@@ -290,8 +294,8 @@ export default function ResourcesPage() {
               </div>
             ))}
 
-            {!resources.length ? (
-              <p className="muted-text">No resources found for the current filters.</p>
+            {!filteredResources.length ? (
+              <p className="muted-text">No resources found for the selected time range or search keyword.</p>
             ) : null}
           </div>
         )}
