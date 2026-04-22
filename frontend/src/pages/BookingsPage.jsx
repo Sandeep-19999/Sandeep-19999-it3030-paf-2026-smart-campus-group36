@@ -98,6 +98,15 @@ export default function BookingsPage() {
     () => [...activeResources].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })),
     [activeResources]
   );
+  const alertMessage = error || success;
+  const alertType = error ? 'error' : success ? 'success' : '';
+
+  const dismissAlert = () => {
+    setError('');
+    setSuccess('');
+    setFacilityError('');
+    setFilterError('');
+  };
 
   function validateFilters(nextFilters) {
     return '';
@@ -340,15 +349,25 @@ export default function BookingsPage() {
 
   return (
     <div className="content-grid two-column">
-      {error ? <div className="error-box">{error}</div> : null}
-      {success ? <div className="success-box">{success}</div> : null}
+      {alertMessage ? (
+        <div className={`booking-alert booking-alert-${alertType}`} role="alert" aria-live="polite">
+          <span>{alertMessage}</span>
+          <button
+            type="button"
+            className="booking-alert-close"
+            onClick={dismissAlert}
+            aria-label="Dismiss message"
+          >
+            x
+          </button>
+        </div>
+      ) : null}
 
       {!isAdmin ? (
         <section className="panel">
           <div className="panel-header">
             <h3>Book a Facility</h3>
           </div>
-          {facilityError ? <div className="error-box">{facilityError}</div> : null}
           {!resourceLoading && !sortedActiveResources.length ? (
             <div className="empty-state">
               <p className="muted-text">No active facilities available</p>
@@ -407,7 +426,7 @@ export default function BookingsPage() {
           onApply={applyFilters}
           onReset={resetFilters}
           loading={loading}
-          error={filterError}
+          error=""
         />
       )}
 
