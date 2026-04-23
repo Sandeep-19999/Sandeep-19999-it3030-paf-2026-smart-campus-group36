@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -58,11 +59,17 @@ public class BookingService {
     }
 
     public BookingResponse createBooking(BookingCreateRequest request, User currentUser) {
-        Facility facility = resolveBookableFacility(request.facilityId());
+        BookableFacilityContext context = resolveBookableFacilityContext(request.facilityId());
         validateTimeRange(request.startTime(), request.endTime());
+        validateAvailabilityWindow(
+            request.startTime(),
+            request.endTime(),
+            context.availabilityStart(),
+            context.availabilityEnd()
+        );
 
         boolean hasConflict = bookingRepository.existsOverlappingBookings(
-                facility,
+            context.facility(),
                 request.startTime(),
                 request.endTime(),
                 Set.of(BookingStatus.PENDING, BookingStatus.APPROVED)
@@ -72,7 +79,7 @@ public class BookingService {
         }
 
         Booking booking = new Booking();
-        booking.setFacility(facility);
+        booking.setFacility(context.facility());
         booking.setRequester(currentUser);
         booking.setPurpose(request.purpose());
         booking.setStartTime(request.startTime());
@@ -87,7 +94,7 @@ public class BookingService {
                 notificationService.create(
                         admin,
                         "New facility booking request",
-                        currentUser.getFullName() + " requested " + facility.getName(),
+                    currentUser.getFullName() + " requested " + context.facility().getName(),
                         NotificationType.BOOKING_CREATED,
                         String.valueOf(saved.getId())
                 )
@@ -301,13 +308,34 @@ public class BookingService {
         return new UserSummaryResponse(user.getId(), user.getFullName(), user.getEmail(), user.getRole().name());
     }
 
-    private Facility resolveBookableFacility(Long selectedId) {
+    private BookableFacilityContext resolveBookableFacilityContext(Long selectedId) {
         Facility facility = facilityRepository.findById(selectedId).orElse(null);
         if (facility != null) {
             if (!facility.isActive()) {
                 throw new ForbiddenOperationException("This facility is currently unavailable for booking");
             }
-            return facility;
+
+            Resource availabilitySource = resourceRepository.findById(selectedId)
+                    .orElseGet(() -> resourceRepository
+                            .findFirstByNameIgnoreCaseAndTypeIgnoreCaseAndLocationIgnoreCase(
+                                    facility.getName(),
+                                    facility.getType(),
+                                    facility.getLocation()
+                            )
+                            .orElse(null));
+
+            if (availabilitySource == null) {
+                throw new BadRequestException("Facility availability window is not configured");
+            }
+            if (availabilitySource.getStatus() != Status.ACTIVE) {
+                throw new ForbiddenOperationException("This facility is currently unavailable for booking");
+            }
+
+            return new BookableFacilityContext(
+                    facility,
+                    availabilitySource.getAvailabilityStart(),
+                    availabilitySource.getAvailabilityEnd()
+            );
         }
 
         Resource resource = resourceRepository.findById(selectedId)
@@ -326,7 +354,11 @@ public class BookingService {
             if (!existing.isActive()) {
                 throw new ForbiddenOperationException("This facility is currently unavailable for booking");
             }
-            return existing;
+            return new BookableFacilityContext(
+                    existing,
+                    resource.getAvailabilityStart(),
+                    resource.getAvailabilityEnd()
+            );
         }
 
         Facility generated = new Facility();
@@ -336,13 +368,46 @@ public class BookingService {
         generated.setCapacity(resource.getCapacity());
         generated.setDescription("Auto-created from active resource catalogue");
         generated.setActive(true);
-        return facilityRepository.save(generated);
+        return new BookableFacilityContext(
+                facilityRepository.save(generated),
+                resource.getAvailabilityStart(),
+                resource.getAvailabilityEnd()
+        );
     }
 
     private void validateTimeRange(LocalDateTime startTime, LocalDateTime endTime) {
         if (!endTime.isAfter(startTime)) {
             throw new BadRequestException("Booking end time must be after start time");
         }
+    }
+
+    private void validateAvailabilityWindow(
+            LocalDateTime startTime,
+            LocalDateTime endTime,
+            LocalTime availabilityStart,
+            LocalTime availabilityEnd
+    ) {
+        if (availabilityStart == null || availabilityEnd == null) {
+            throw new BadRequestException("Facility availability window is not configured");
+        }
+
+        LocalTime requestedStartTime = startTime.toLocalTime();
+        LocalTime requestedEndTime = endTime.toLocalTime();
+
+        boolean startInsideWindow = isWithinAvailabilityWindow(requestedStartTime, availabilityStart, availabilityEnd);
+        boolean endInsideWindow = isWithinAvailabilityWindow(requestedEndTime, availabilityStart, availabilityEnd);
+
+        if (!startInsideWindow || !endInsideWindow) {
+            throw new BadRequestException("Booking time must be within the facility availability window");
+        }
+    }
+
+    private boolean isWithinAvailabilityWindow(LocalTime candidate, LocalTime availabilityStart, LocalTime availabilityEnd) {
+        // Supports both normal windows (08:00-18:00) and overnight windows (22:00-02:00).
+        if (!availabilityStart.isAfter(availabilityEnd)) {
+            return !candidate.isBefore(availabilityStart) && !candidate.isAfter(availabilityEnd);
+        }
+        return !candidate.isBefore(availabilityStart) || !candidate.isAfter(availabilityEnd);
     }
 
     private void requireAdmin(User currentUser) {
@@ -377,5 +442,12 @@ public class BookingService {
 
     private boolean hasText(String value) {
         return value != null && !value.trim().isEmpty();
+    }
+
+    private record BookableFacilityContext(
+            Facility facility,
+            LocalTime availabilityStart,
+            LocalTime availabilityEnd
+    ) {
     }
 }
