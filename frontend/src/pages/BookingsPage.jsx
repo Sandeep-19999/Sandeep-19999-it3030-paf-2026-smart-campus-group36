@@ -13,6 +13,41 @@ function toTimeValue(date) {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
 
+function timeToMinutes(value) {
+  const [hour, minute] = String(value || '').split(':').map(Number);
+  if (Number.isNaN(hour) || Number.isNaN(minute)) {
+    return null;
+  }
+  return (hour * 60) + minute;
+}
+
+function isWithinAvailabilityWindow(timeValue, availabilityStart, availabilityEnd) {
+  const candidate = timeToMinutes(timeValue);
+  const windowStart = timeToMinutes(availabilityStart);
+  const windowEnd = timeToMinutes(availabilityEnd);
+
+  if (candidate === null || windowStart === null || windowEnd === null) {
+    return true;
+  }
+
+  if (windowStart <= windowEnd) {
+    return candidate >= windowStart && candidate <= windowEnd;
+  }
+
+  return candidate >= windowStart || candidate <= windowEnd;
+}
+
+function formatAvailabilityLabel(timeValue) {
+  if (!timeValue) {
+    return '--:--';
+  }
+  const parsed = new Date(`1970-01-01T${timeValue}`);
+  if (Number.isNaN(parsed.getTime())) {
+    return timeValue;
+  }
+  return parsed.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+}
+
 function calculateEndTimeMax(startDateTimeValue) {
   if (!startDateTimeValue) {
     return '';
@@ -27,7 +62,7 @@ function calculateEndTimeMax(startDateTimeValue) {
   return toTimeValue(maxByDuration > endOfStartDay ? endOfStartDay : maxByDuration);
 }
 
-function getBookingTimeValidationMessage(startDateTimeValue, endTimeValue) {
+function getBookingTimeValidationMessage(startDateTimeValue, endTimeValue, availabilityStart, availabilityEnd) {
   if (!startDateTimeValue || !endTimeValue) {
     return '';
   }
@@ -49,6 +84,24 @@ function getBookingTimeValidationMessage(startDateTimeValue, endTimeValue) {
   }
   if (diffMs > MAX_BOOKING_DURATION_MS) {
     return 'Booking duration cannot exceed 4 hours';
+  }
+
+  const bookingStartTimeValue = toTimeValue(start);
+  if (availabilityStart && availabilityEnd) {
+    const startInsideAvailability = isWithinAvailabilityWindow(
+      bookingStartTimeValue,
+      availabilityStart,
+      availabilityEnd
+    );
+    const endInsideAvailability = isWithinAvailabilityWindow(
+      endTimeValue,
+      availabilityStart,
+      availabilityEnd
+    );
+
+    if (!startInsideAvailability || !endInsideAvailability) {
+      return 'Booking time must be within the facility availability window';
+    }
   }
 
   return '';
@@ -97,6 +150,10 @@ export default function BookingsPage() {
   const sortedActiveResources = useMemo(
     () => [...activeResources].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })),
     [activeResources]
+  );
+  const selectedResource = useMemo(
+    () => sortedActiveResources.find((resource) => String(resource.id) === String(bookingForm.facilityId)) || null,
+    [sortedActiveResources, bookingForm.facilityId]
   );
   const alertMessage = error || success;
   const alertType = error ? 'error' : success ? 'success' : '';
@@ -216,17 +273,37 @@ export default function BookingsPage() {
         return next;
       });
 
-      setBookingTimeError(getBookingTimeValidationMessage(value, nextEndTime));
+      setBookingTimeError(getBookingTimeValidationMessage(
+        value,
+        nextEndTime,
+        selectedResource?.availabilityStart,
+        selectedResource?.availabilityEnd
+      ));
       return;
     }
 
     if (name === 'endTime') {
       setBookingForm((prev) => {
         const next = { ...prev, endTime: value };
-        setBookingTimeError(getBookingTimeValidationMessage(next.startTime, value));
+        setBookingTimeError(getBookingTimeValidationMessage(
+          next.startTime,
+          value,
+          selectedResource?.availabilityStart,
+          selectedResource?.availabilityEnd
+        ));
         return next;
       });
       return;
+    }
+
+    if (name === 'facilityId') {
+      const nextResource = sortedActiveResources.find((resource) => String(resource.id) === String(value));
+      setBookingTimeError(getBookingTimeValidationMessage(
+        bookingForm.startTime,
+        bookingForm.endTime,
+        nextResource?.availabilityStart,
+        nextResource?.availabilityEnd
+      ));
     }
 
     setBookingForm((prev) => ({ ...prev, [name]: value }));
@@ -257,7 +334,9 @@ export default function BookingsPage() {
 
     const timeValidationMessage = getBookingTimeValidationMessage(
       bookingForm.startTime,
-      bookingForm.endTime
+      bookingForm.endTime,
+      selectedResource?.availabilityStart,
+      selectedResource?.availabilityEnd
     );
     if (!bookingForm.startDate) {
       setError('Start time is required');
@@ -284,6 +363,9 @@ export default function BookingsPage() {
       setSuccess('Booking submitted successfully');
       await loadData();
     } catch (err) {
+      if (String(err.message || '').toLowerCase().includes('availability window')) {
+        setBookingTimeError(err.message);
+      }
       setError(err.message);
     }
   };
@@ -380,14 +462,21 @@ export default function BookingsPage() {
                     <p className="muted-text">Loading resources...</p>
                   </div>
                 ) : (
-                  <select name="facilityId" value={bookingForm.facilityId} onChange={handleBookingChange} required>
-                    <option value="">Select a facility</option>
-                    {sortedActiveResources.map((resource) => (
-                      <option key={resource.id} value={resource.id}>
-                        {resource.name} ({resource.type})
-                      </option>
-                    ))}
-                  </select>
+                  <>
+                    <select name="facilityId" value={bookingForm.facilityId} onChange={handleBookingChange} required>
+                      <option value="">Select a facility</option>
+                      {sortedActiveResources.map((resource) => (
+                        <option key={resource.id} value={resource.id}>
+                          {resource.name} ({resource.type})
+                        </option>
+                      ))}
+                    </select>
+                    {selectedResource?.availabilityStart && selectedResource?.availabilityEnd ? (
+                      <p className="muted-text">
+                        Available from {formatAvailabilityLabel(selectedResource.availabilityStart)} to {formatAvailabilityLabel(selectedResource.availabilityEnd)}
+                      </p>
+                    ) : null}
+                  </>
                 )}
               </label>
               <label>Purpose

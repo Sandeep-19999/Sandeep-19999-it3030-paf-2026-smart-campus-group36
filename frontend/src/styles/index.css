@@ -624,6 +624,16 @@ label { display: grid; gap: 0.4rem; font-weight: 600; color: #334155; }
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 1rem;
 }
+.dashboard-recent-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+@media (max-width: 1080px) {
+  .dashboard-recent-grid {
+    grid-template-columns: 1fr;
+  }
+}
 .stat-card {
   background: white;
   border-radius: 20px;
@@ -745,6 +755,28 @@ label { display: grid; gap: 0.4rem; font-weight: 600; color: #334155; }
 .muted-text { color: #64748b; margin: 0; }
 .booking-row { align-items: flex-start; }
 .booking-actions { min-width: 120px; }
+.dashboard-booking-summary {
+  display: grid;
+  gap: 0.35rem;
+}
+.dashboard-booking-actions {
+  align-items: end;
+}
+.booking-inline-label {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.34rem 0.68rem;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.dashboard-section-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.25rem;
+}
 .modal-backdrop {
   position: fixed;
   inset: 0;
