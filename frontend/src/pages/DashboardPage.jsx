@@ -29,6 +29,7 @@ function formatBookingRange(startTime, endTime) {
 
 export default function DashboardPage() {
   const { token, user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
   const [tickets, setTickets] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [summary, setSummary] = useState({ unreadCount: 0 });
@@ -38,17 +39,19 @@ export default function DashboardPage() {
       const [ticketData, summaryData, bookingData] = await Promise.all([
         ticketService.getTickets(token),
         notificationService.getSummary(token),
-        bookingService.getMyBookings(token)
+        isAdmin ? bookingService.getBookings({}, token) : bookingService.getMyBookings(token)
       ]);
       setTickets(Array.isArray(ticketData) ? ticketData : []);
       setSummary(summaryData || { unreadCount: 0 });
       setBookings(Array.isArray(bookingData) ? bookingData : []);
     }
     load().catch(console.error);
-  }, [token, user]);
+  }, [token, user, isAdmin]);
 
   const openTickets = tickets.filter((ticket) => ['OPEN', 'IN_PROGRESS'].includes(ticket.status));
   const pendingBookings = bookings.filter((booking) => booking.status === 'PENDING');
+  const bookingSummaryCount = isAdmin ? bookings.length : pendingBookings.length;
+  const bookingSummaryLabel = isAdmin ? 'All Bookings' : 'Pending Bookings';
   const recentBookings = [...bookings]
     .sort((left, right) => new Date(right.startTime).getTime() - new Date(left.startTime).getTime())
     .slice(0, 5);
@@ -84,8 +87,8 @@ export default function DashboardPage() {
           <strong>{summary.unreadCount || 0}</strong>
         </article>
         <article className="stat-card">
-          <span>Pending Bookings</span>
-          <strong>{pendingBookings.length}</strong>
+          <span>{bookingSummaryLabel}</span>
+          <strong>{bookingSummaryCount}</strong>
         </article>
         <article className="stat-card">
           <span>Logged In As</span>
