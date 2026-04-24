@@ -74,7 +74,7 @@ public class AuthController {
     @GetMapping("/oauth-info")
     public Map<String, Object> oauthInfo() {
         return Map.of(
-                "googleLoginUrl", "http://localhost:8080/oauth2/authorization/google",
+                "googleLoginUrl", "/oauth2/authorization/google",
                 "note", "Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to enable Google OAuth."
         );
     }
