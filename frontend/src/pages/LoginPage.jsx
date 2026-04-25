@@ -91,7 +91,7 @@ export default function LoginPage() {
             Email
             <input
               type="email"
-              placeholder="you@uni.edu"
+              placeholder="it2381xxxx@my.sliit.lk"
               value={form.email}
               onChange={(e) =>
                 setForm((prev) => ({
