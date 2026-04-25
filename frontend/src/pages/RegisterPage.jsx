@@ -106,7 +106,7 @@ export default function RegisterPage() {
             Email
             <input
               type="email"
-              placeholder="you@uni.edu"
+              placeholder="it2381xxxx@my.sliit.lk"
               value={form.email}
               onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
               aria-invalid={Boolean(fieldErrors.email)}
