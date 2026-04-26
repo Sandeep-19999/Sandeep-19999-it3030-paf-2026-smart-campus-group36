@@ -430,7 +430,8 @@ export default function BookingsPage() {
   };
 
   return (
-    <div className="content-grid two-column">
+    <div className="resource-catalogue-page bookings-resource-page">
+      <div className="content-grid two-column">
       {alertMessage ? (
         <div className={`booking-alert booking-alert-${alertType}`} role="alert" aria-live="polite">
           <span>{alertMessage}</span>
@@ -566,6 +567,7 @@ export default function BookingsPage() {
         qrCodeImageBase64={qrImageBase64}
         onClose={closeQrModal}
       />
+      </div>
     </div>
   );
 }

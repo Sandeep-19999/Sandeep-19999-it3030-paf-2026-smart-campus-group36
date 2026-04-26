@@ -27,27 +27,29 @@ export default function NotificationsPage() {
   };
 
   return (
-    <section className="panel">
-      <div className="panel-header">
-        <h3>Notifications</h3>
-        <button className="secondary-btn" onClick={markAll}>Mark all as read</button>
-      </div>
-      <div className="list-stack">
-        {notifications.map((item) => (
-          <div key={item.id} className={`notification-card ${item.read ? 'notification-read' : 'notification-unread'}`}>
-            <div className="comment-header">
-              <strong>{item.title}</strong>
-              <span className="muted-text">{formatDate(item.createdAt)}</span>
+    <div className="resource-catalogue-page notifications-resource-page">
+      <section className="panel resource-list-card">
+        <div className="panel-header">
+          <h3>Notifications</h3>
+          <button className="secondary-btn" onClick={markAll}>Mark all as read</button>
+        </div>
+        <div className="list-stack">
+          {notifications.map((item) => (
+            <div key={item.id} className={`notification-card ${item.read ? 'notification-read' : 'notification-unread'}`}>
+              <div className="comment-header">
+                <strong>{item.title}</strong>
+                <span className="muted-text">{formatDate(item.createdAt)}</span>
+              </div>
+              <p>{item.message}</p>
+              <div className="comment-actions">
+                <span className="muted-text">{item.type}</span>
+                {!item.read ? <button className="text-btn" onClick={() => markOne(item.id)}>Mark as read</button> : null}
+              </div>
             </div>
-            <p>{item.message}</p>
-            <div className="comment-actions">
-              <span className="muted-text">{item.type}</span>
-              {!item.read ? <button className="text-btn" onClick={() => markOne(item.id)}>Mark as read</button> : null}
-            </div>
-          </div>
-        ))}
-        {!notifications.length ? <p className="muted-text">No notifications found.</p> : null}
-      </div>
-    </section>
+          ))}
+          {!notifications.length ? <p className="muted-text">No notifications found.</p> : null}
+        </div>
+      </section>
+    </div>
   );
 }
