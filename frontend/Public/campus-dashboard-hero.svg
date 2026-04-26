@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-labelledby="title desc">
+  <title id="title">Smart Campus dashboard illustration</title>
+  <desc id="desc">Blue and green campus themed illustration with floating cards for bookings, resources, tickets and notifications.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#09111f"/>
+      <stop offset="55%" stop-color="#12284a"/>
+      <stop offset="100%" stop-color="#1ba8a0"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#173a65" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#0f1f36" stop-opacity="0.92"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#2ea7ff"/>
+      <stop offset="100%" stop-color="#22c55e"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#203858"/>
+      <stop offset="100%" stop-color="#17263f"/>
+    </linearGradient>
+    <filter id="blur" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="25"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="900" rx="48" fill="url(#bg)"/>
+  <circle cx="190" cy="180" r="180" fill="#2b73ff" opacity="0.12" filter="url(#blur)"/>
+  <circle cx="1020" cy="180" r="210" fill="#22c55e" opacity="0.12" filter="url(#blur)"/>
+  <circle cx="970" cy="690" r="250" fill="#35d6ff" opacity="0.08" filter="url(#blur)"/>
+
+  <path d="M150 635 C300 520, 510 500, 690 560 C850 614, 960 640, 1080 610 L1080 870 L150 870 Z" fill="#0b1526" opacity="0.7"/>
+  <path d="M180 650 C330 560, 495 545, 660 590 C830 638, 945 675, 1060 650" fill="none" stroke="#2ea7ff" stroke-opacity="0.18" stroke-width="8"/>
+
+  <rect x="102" y="70" width="180" height="56" rx="16" fill="#eef5ff"/>
+  <circle cx="141" cy="98" r="20" fill="#233b5d"/>
+  <path d="M129 100c0-10 6-18 14-18s14 8 14 18-6 18-14 18-14-8-14-18Z" fill="#2ea7ff" opacity="0.7"/>
+  <rect x="161" y="88" width="88" height="12" rx="6" fill="#1b365d" opacity="0.9"/>
+
+  <rect x="240" y="145" width="720" height="520" rx="34" fill="url(#panel)" stroke="#2ea7ff" stroke-opacity="0.48" stroke-width="4"/>
+  <rect x="240" y="145" width="720" height="10" rx="5" fill="url(#accent)"/>
+
+  <text x="280" y="234" fill="#8ec8ff" font-size="24" font-family="Arial, Helvetica, sans-serif" font-weight="700" letter-spacing="2">ABOUT SMART CAMPUS</text>
+  <text x="280" y="305" fill="#f4f8ff" font-size="60" font-family="Arial, Helvetica, sans-serif" font-weight="800">One connected space for</text>
+  <text x="280" y="374" fill="#f4f8ff" font-size="60" font-family="Arial, Helvetica, sans-serif" font-weight="800">campus learning and services.</text>
+  <text x="280" y="436" fill="#bed3ea" font-size="25" font-family="Arial, Helvetica, sans-serif">Book facilities, track requests, view notifications, and manage</text>
+  <text x="280" y="471" fill="#bed3ea" font-size="25" font-family="Arial, Helvetica, sans-serif">everything in one secure student portal.</text>
+
+  <rect x="92" y="700" width="260" height="132" rx="26" fill="url(#card)" stroke="#244165" stroke-opacity="0.7"/>
+  <rect x="388" y="700" width="260" height="132" rx="26" fill="url(#card)" stroke="#244165" stroke-opacity="0.7"/>
+  <rect x="684" y="700" width="260" height="132" rx="26" fill="url(#card)" stroke="#244165" stroke-opacity="0.7"/>
+
+  <rect x="120" y="728" width="64" height="64" rx="18" fill="#0f2744" stroke="#2ea7ff" stroke-opacity="0.45"/>
+  <path d="M136 758h32M136 744h32M136 772h18" stroke="#2ea7ff" stroke-width="6" stroke-linecap="round"/>
+  <text x="202" y="754" fill="#f3f7ff" font-size="28" font-family="Arial, Helvetica, sans-serif" font-weight="700">Facilities</text>
+  <text x="202" y="787" fill="#9cb6d3" font-size="19" font-family="Arial, Helvetica, sans-serif">Browse rooms, labs, and shared resources.</text>
+
+  <rect x="416" y="728" width="64" height="64" rx="18" fill="#0f2744" stroke="#22c55e" stroke-opacity="0.45"/>
+  <path d="M432 752h32M432 768h22" stroke="#22c55e" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="443" cy="744" r="5" fill="#22c55e"/>
+  <text x="498" y="754" fill="#f3f7ff" font-size="28" font-family="Arial, Helvetica, sans-serif" font-weight="700">Bookings</text>
+  <text x="498" y="787" fill="#9cb6d3" font-size="19" font-family="Arial, Helvetica, sans-serif">Reserve spaces and track approvals.</text>
+
+  <rect x="712" y="728" width="64" height="64" rx="18" fill="#0f2744" stroke="#35d6ff" stroke-opacity="0.45"/>
+  <path d="M730 750h28M730 766h28" stroke="#35d6ff" stroke-width="6" stroke-linecap="round"/>
+  <text x="794" y="754" fill="#f3f7ff" font-size="28" font-family="Arial, Helvetica, sans-serif" font-weight="700">Support</text>
+  <text x="794" y="787" fill="#9cb6d3" font-size="19" font-family="Arial, Helvetica, sans-serif">Tickets, updates, and campus alerts.</text>
+
+  <g transform="translate(840 230)">
+    <rect x="0" y="0" width="220" height="72" rx="20" fill="#1b3354" stroke="#2ea7ff" stroke-opacity="0.32"/>
+    <circle cx="34" cy="36" r="16" fill="#2ea7ff" opacity="0.9"/>
+    <rect x="64" y="23" width="104" height="12" rx="6" fill="#eef7ff" opacity="0.92"/>
+    <rect x="64" y="43" width="72" height="8" rx="4" fill="#97b3cf" opacity="0.7"/>
+  </g>
+  <g transform="translate(790 340)">
+    <rect x="0" y="0" width="270" height="78" rx="22" fill="#1d3659" stroke="#22c55e" stroke-opacity="0.3"/>
+    <circle cx="36" cy="39" r="18" fill="#22c55e" opacity="0.9"/>
+    <rect x="70" y="24" width="122" height="12" rx="6" fill="#eef7ff" opacity="0.92"/>
+    <rect x="70" y="46" width="96" height="8" rx="4" fill="#97b3cf" opacity="0.7"/>
+  </g>
+</svg>

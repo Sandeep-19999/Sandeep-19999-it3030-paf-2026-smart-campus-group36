@@ -1,25 +1,34 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { FiCalendar, FiBookOpen, FiFileText, FiBell, FiGrid, FiSettings, FiShield } from 'react-icons/fi';
 import { useAuth } from '../contexts/AuthContext';
 import RealtimeCalendar from '../components/RealtimeCalendar';
 
-const HERO_IMAGE_CANDIDATES = [
-  '/homepage-students.jpg',
-  '/homepage-students.jpeg',
-  '/homepage-students.png',
-  '/students.jpg',
-  '/students.jpeg',
-  '/students.png'
-];
-
 export default function HomePage() {
   const { isAuthenticated, user, logout } = useAuth();
-  const [heroImageIndex, setHeroImageIndex] = useState(0);
   const [logoVisible, setLogoVisible] = useState(true);
-
-  const handleHeroImageError = () => {
-    setHeroImageIndex((index) => Math.min(index + 1, HERO_IMAGE_CANDIDATES.length - 1));
-  };
+  const spotlightCards = [
+    {
+      title: 'Facilities',
+      text: 'Browse campus resources, inspect availability, and manage resource details.',
+      icon: FiGrid
+    },
+    {
+      title: 'Bookings',
+      text: 'Submit reservations, track approval status, and use QR check-in for approved slots.',
+      icon: FiCalendar
+    },
+    {
+      title: 'Maintenance',
+      text: 'Report issues with photos, comments, assignments, and status updates.',
+      icon: FiSettings
+    },
+    {
+      title: 'Admin Control',
+      text: 'Manage users, roles, approvals, resources, and operational dashboards.',
+      icon: FiShield
+    }
+  ];
 
   return (
     <div className="course-home-shell">
@@ -57,8 +66,8 @@ export default function HomePage() {
             <>
               <p>Access your smart campus account</p>
               <div className="course-login-actions">
-                <Link to="/auth/login" className="course-login-link">Login</Link>
-                <Link to="/auth/register" className="course-login-link">Register</Link>
+                <Link to="/auth/login" className="course-login-link course-login-link-login">Login</Link>
+                <Link to="/auth/register" className="course-login-link course-login-link-register">Register</Link>
               </div>
             </>
           )}
@@ -66,36 +75,37 @@ export default function HomePage() {
       </header>
 
       <nav className="course-main-nav">
-        <Link to="/app/bookings">Bookings</Link>
-        <Link to="/app/resources">Resources</Link>
-        <Link to="/app/tickets">Tickets</Link>
-        <Link to="/app/notifications">Notifications</Link>
-        <Link to="/facilities">Facilities</Link>
+        <Link to="/app/bookings"><FiCalendar aria-hidden="true" /> Bookings</Link>
+        <Link to="/app/resources"><FiBookOpen aria-hidden="true" /> Resources</Link>
+        <Link to="/app/tickets"><FiFileText aria-hidden="true" /> Tickets</Link>
+        <Link to="/app/notifications"><FiBell aria-hidden="true" /> Notifications</Link>
+        <Link to="/facilities"><FiGrid aria-hidden="true" /> Facilities</Link>
       </nav>
 
       <section className="course-hero">
+        <div className="course-hero-overlay" aria-hidden="true" />
         <div className="course-hero-content">
-          <p className="course-hero-tag">Smart Campus Module</p>
-          <h2>EVOLVE BEYOND</h2>
-          <p>
-            Access facilities, learning resources, and student services through one streamlined
-            campus experience.
-          </p>
-          <div className="course-hero-actions">
-            <Link to="/facilities" className="primary-btn">View Facilities</Link>
-            <Link to={isAuthenticated ? '/app/dashboard' : '/auth/login'} className="secondary-btn">
-              {isAuthenticated ? 'Open Dashboard' : 'Open Portal'}
-            </Link>
+          <div className="course-hero-panel">
+            <p className="course-hero-tag">Do you need any help?</p>
+            <h2>WELCOME TO OUR UNIVERSITY</h2>
+            <p>
+              Manage bookings, resources, tickets, notifications, and support from one secure
+              student dashboard built for everyday campus operations.
+            </p>
           </div>
         </div>
-        <div className="course-hero-visual" aria-hidden="true">
-          <img
-            className="course-hero-image"
-            src={HERO_IMAGE_CANDIDATES[heroImageIndex]}
-            alt="Students reading books together"
-            onError={handleHeroImageError}
-          />
-        </div>
+      </section>
+
+      <section className="course-shortcuts-grid" aria-label="Key campus services">
+        {spotlightCards.map((card) => (
+          <article key={card.title} className="course-shortcut-card">
+            <span className="course-shortcut-mark" aria-hidden="true">
+              <card.icon />
+            </span>
+            <h3>{card.title}</h3>
+            <p>{card.text}</p>
+          </article>
+        ))}
       </section>
 
       <section className="course-support-section">
