@@ -58,7 +58,8 @@ export default function TicketsPage() {
   const canCreateTicket = user?.role === 'USER';
 
   return (
-    <div className={canCreateTicket ? 'content-grid two-column' : 'content-grid'}>
+    <div className="resource-catalogue-page tickets-resource-page">
+      <div className={canCreateTicket ? 'content-grid two-column' : 'content-grid'}>
       {canCreateTicket ? (
         <section className="panel">
           <div className="panel-header">
@@ -118,6 +119,7 @@ export default function TicketsPage() {
           {!tickets.length ? <p className="muted-text">No tickets available.</p> : null}
         </div>
       </section>
+      </div>
     </div>
   );
 }

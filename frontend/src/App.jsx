@@ -19,8 +19,8 @@ import { useAuth } from './contexts/AuthContext';
 
 function AdminPage() {
   return (
-    <div className="content-grid">
-      <section className="panel">
+    <div className="resource-catalogue-page admin-resource-page">
+      <section className="panel resource-list-card">
         <div className="panel-header">
           <h3>Admin Console</h3>
         </div>

@@ -1,6 +1,6 @@
 export default function BookingFiltersPanel({ filters, onChange, onApply, onReset, loading, error }) {
   return (
-    <section className="panel booking-filter-card">
+    <section className="panel booking-filter-card resource-filter-card">
       <div className="panel-header">
         <h3>Booking Filters</h3>
       </div>
