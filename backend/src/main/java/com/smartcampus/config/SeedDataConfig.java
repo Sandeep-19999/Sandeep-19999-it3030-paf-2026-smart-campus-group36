@@ -79,8 +79,10 @@ public class SeedDataConfig {
             }
 
             User admin = new User();
+            admin.setFirstName("System");
+            admin.setLastName("Admin");
             admin.setFullName("System Admin");
-            admin.setEmail("admin@smartcampus.local");
+            admin.setEmail("it00000001@my.sliit.lk");
             admin.setUniversityId("IT00000001");
             admin.setPasswordHash(passwordEncoder.encode("Admin@123"));
             admin.setRole(Role.ADMIN);
@@ -88,8 +90,10 @@ public class SeedDataConfig {
             userRepository.save(admin);
 
             User technician = new User();
+            technician.setFirstName("Main");
+            technician.setLastName("Technician");
             technician.setFullName("Main Technician");
-            technician.setEmail("tech@smartcampus.local");
+            technician.setEmail("it00000002@my.sliit.lk");
             technician.setUniversityId("IT00000002");
             technician.setPasswordHash(passwordEncoder.encode("Tech@123"));
             technician.setRole(Role.TECHNICIAN);
@@ -97,8 +101,10 @@ public class SeedDataConfig {
             userRepository.save(technician);
 
             User student = new User();
+            student.setFirstName("Campus");
+            student.setLastName("User");
             student.setFullName("Campus User");
-            student.setEmail("user@smartcampus.local");
+            student.setEmail("it00000003@my.sliit.lk");
             student.setUniversityId("IT00000003");
             student.setPasswordHash(passwordEncoder.encode("User@123"));
             student.setRole(Role.USER);

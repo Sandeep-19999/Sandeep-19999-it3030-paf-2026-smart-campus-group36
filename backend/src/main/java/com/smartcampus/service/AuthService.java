@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Locale;
 
 @Service
 public class AuthService {
@@ -40,7 +41,8 @@ public class AuthService {
     }
 
     public AuthResponse devLogin(DevLoginRequest request) {
-        User user = userRepository.findByEmailIgnoreCase(request.email())
+        String email = normalizeEmail(request.email());
+        User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new BadCredentialsException("Invalid email or password"));
         if (user.getPasswordHash() == null || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw new BadCredentialsException("Invalid email or password");
@@ -50,9 +52,18 @@ public class AuthService {
     }
 
     public AuthResponse register(RegisterRequest request) {
+        String firstName = normalizeName(request.firstName());
+        String lastName = normalizeName(request.lastName());
+        String universityId = normalizeUniversityId(request.universityId());
         String email = normalizeEmail(request.email());
+
+        validateUniversityEmailMatch(universityId, email);
+
         if (userRepository.findByEmailIgnoreCase(email).isPresent()) {
             throw new BadRequestException("Email is already registered");
+        }
+        if (userRepository.findByUniversityIdIgnoreCase(universityId).isPresent()) {
+            throw new BadRequestException("IT number is already registered");
         }
         if (!request.password().equals(request.confirmPassword())) {
             throw new BadRequestException("Passwords do not match");
@@ -62,7 +73,10 @@ public class AuthService {
         }
 
         User user = new User();
-        user.setFullName(request.fullName().trim());
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+        user.setFullName(firstName + " " + lastName);
+        user.setUniversityId(universityId);
         user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         user.setAuthProvider(AuthProvider.LOCAL);
@@ -102,7 +116,28 @@ public class AuthService {
     }
 
     private String normalizeEmail(String email) {
-        return email == null ? null : email.trim().toLowerCase();
+        return email == null ? null : email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String normalizeUniversityId(String universityId) {
+        return universityId == null ? null : universityId.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private String normalizeName(String name) {
+        if (name == null) {
+            return null;
+        }
+        return name.trim().replaceAll("\\s+", " ");
+    }
+
+    private void validateUniversityEmailMatch(String universityId, String email) {
+        if (universityId == null || email == null) {
+            return;
+        }
+        String expectedEmail = universityId.toLowerCase(Locale.ROOT) + "@my.sliit.lk";
+        if (!expectedEmail.equals(email)) {
+            throw new BadRequestException("Email must match the IT number. Example: " + expectedEmail);
+        }
     }
 
     private void validateAdminPasscode(String passcode) {
